@@ -130,6 +130,6 @@ if __name__ == "__main__":
     argparse.add_argument("--input-file", "-i", help="Input file path", type=str)
     input_file = argparse.parse_args().input_file
     output_file = f"{input_file.split('.')[0]}_parsed.csv"
-    process_transactions_file(input_file, output_file, model="gemma2:latest")
+    process_transactions_file(input_file, output_file, model="gemma2:2b")
 
     
