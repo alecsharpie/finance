@@ -7,9 +7,9 @@ Make sure ollama is running
 curl -v http://localhost:11434/
 ```
 
-download a model, i used Gemma2 9B
+download a model, i used Gemma2 2B
 ```bash
-ollama pull gemma2:9b
+ollama pull gemma2:2b
 ```
 
 Check the model is available

@@ -23,9 +23,10 @@ Output:
 ```json
 {{
     "merchant_name": "UBER* TRIP",
+    "transaction_type": "Merchant",
     "location": null,
     "currency": null,
-    "card_number": null,
+    "last_4_card_number": null,
     "value_date": null
 }}
 ```
@@ -35,9 +36,10 @@ Output:
 ```json
 {{
     "merchant_name": "EZI*TPC",
+    "transaction_type": "Merchant",
     "location": "Fitzroy MELBOURNE AU AUS",
     "currency": "AUS",
-    "card_number": "xxxx-xxxx-xxxx-4321",
+    "last_4_card_number": "xx4321",
     "value_date": "24/10/2024"
 }}
 ```
@@ -47,12 +49,51 @@ Output:
 ```json
 {{
     "merchant_name": "SP BENCHCLEARERS",
+    "transaction_type": "Merchant",
     "location": "NEWARK DE USA",
     "currency": "USD",
-    "card_number": "xxxx-xxxx-xxxx-1234",
+    "last_4_card_number": "xx1234",
     "value_date": "21/10/2024"
 }}
 ```
+
+Input: "Direct Debit 376681 John Doe PT 155982777"
+Output:
+```json
+{{
+    "merchant_name": "Joe Blog PT 155982777",
+    "transaction_type": "Direct Debit",
+    "location": null,
+    "currency": null,
+    "last_4_card_number": null,
+    "value_date": null
+}}
+```
+
+Input: "International Transaction Fee Value Date: 20/10/2024"
+Output:
+```json
+{{
+    "merchant_name": "International Transaction Fee",
+    "transaction_type": "Fee",
+    "location": null,
+    "currency": null,
+    "last_4_card_number": null,
+    "value_date": "20/10/2024"
+}}
+```
+
+Input: "Transfer To J R Blog PayID Phone from CommBank App Octoberfest"
+Output:
+```json
+{{
+    "merchant_name": "J R Blog PayID Phone",
+    "transaction_type": "Transfer",
+    "location": null,
+    "currency": null,
+    "last_4_card_number": null,
+    "value_date": null
+}}
 
 Now parse this transaction:
 Input: "{transaction[2]}"
@@ -94,8 +135,8 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
         
         # Write header
         headers = [
-            'date', 'amount', 'balance', 'original_description', 'merchant_name', 'location',
-            'currency', 'card_number', 'value_date'
+            'date', 'amount', 'balance', 'original_description', 'merchant_name', 'transaction_type', 'location',
+            'currency', 'last_4_card_number', 'value_date'
         ]
         writer.writerow(headers)
         
@@ -113,10 +154,11 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
                     row[1],  # amount
                     row[3],  # balance
                     row[2],   # original_description
+                    parsed_data.get('transaction_type', ''),
                     parsed_data.get('merchant_name', ''),
                     parsed_data.get('location', ''),
                     parsed_data.get('currency', ''),
-                    parsed_data.get('card_number', ''),
+                    parsed_data.get('last_4_card_number', ''),
                     parsed_data.get('value_date', '')
                 ]
                 writer.writerow(output_row)
