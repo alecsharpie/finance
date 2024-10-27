@@ -3,7 +3,7 @@ from typing import List
 import argparse
 from tqdm import tqdm
 
-from db import FinanceDB, calculate_row_hash
+from db import FinanceDB, calculate_row_hash, parse_date
 from llm import query_ollama, parse_json_response, is_valid_json
 
 def create_commbank_prompt(transaction: List[str]) -> str:
@@ -114,8 +114,10 @@ def process_commbank_transactions_file(input_file: str, db_path: str, model: str
                 response = query_ollama(prompt, model)
                 parsed_data = parse_json_response(response)
                 
+                parsed_date = parse_date(row[0])
+                
                 transaction_data = {
-                    'date': row[0],
+                    'date': parsed_date,
                     'amount': row[1],
                     'balance': row[3],
                     'original_description': row[2],
@@ -127,7 +129,9 @@ def process_commbank_transactions_file(input_file: str, db_path: str, model: str
                     'hash': row_hash,
                     'source': 'commbank'
                 }
+                
                 db.insert_transaction(transaction_data, row_hash)
+                
             except Exception as e:
                 print(f"Error processing row: {row}")
                 print(f"Error details: {str(e)}")
@@ -135,6 +139,7 @@ def process_commbank_transactions_file(input_file: str, db_path: str, model: str
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", "-i", help="Input file path", type=str, required=True)
-    parser.add_argument("--db-path", "-d", help="Database path", type=str, default="data/finance_staging.db")
+    parser.add_argument("--db-path", "-d", help="Database path", type=str, default="data/finance-stag.db")
     args = parser.parse_args()
+    print(args)
     process_commbank_transactions_file(args.input_file, args.db_path, model="gemma2:2b")
