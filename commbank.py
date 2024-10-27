@@ -114,10 +114,7 @@ def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        result = response.json()
-        
-        # Parse the response as JSON
-        llm_reseponse = result['response']
+        llm_reseponse = response.json()['response']
         json_result = json.loads(llm_reseponse.replace('```json\n', '').replace('\n```', ''))
         return json_result
     
@@ -133,22 +130,17 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
         reader = csv.reader(infile)
         writer = csv.writer(outfile)
         
-        # Write header
         headers = [
-            'date', 'amount', 'balance', 'original_description', 'merchant_name', 'transaction_type', 'location',
-            'currency', 'last_4_card_number', 'value_date'
+            'date', 'amount', 'balance', 'original_description', 'merchant_name', 
+            'transaction_type', 'location', 'currency', 'last_4_card_number', 'value_date'
         ]
         writer.writerow(headers)
         
-        # Process each transaction
         for row in tqdm(reader):
             try:
-                # Query Ollama for parsing
                 prompt = create_prompt(row)
-                # print(prompt)
                 parsed_data = query_ollama(prompt, model)
                 
-                # Combine original data with parsed data
                 output_row = [
                     row[0],  # date
                     row[1],  # amount
