@@ -2,11 +2,6 @@ from finance.db import FinanceDB
 
 db = FinanceDB('data/finance-stag.db')
 
-def get_schema():
-    query = "PRAGMA table_info(transactions)"
-    result = db.run_query_pandas(query)
-    print(result)
-
 def get_recurring_transactions():
     query = """
     SELECT 

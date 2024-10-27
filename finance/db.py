@@ -72,6 +72,12 @@ class FinanceDB:
             ''')
             conn.commit()
     
+    def get_schema(self):
+        with self._get_connection() as conn:
+            query = "PRAGMA table_info(transactions)"
+            result = conn.run_query_pandas(query)
+            print(result)
+    
     def insert_transaction(self, transaction_data: Dict[str, Any], hash_value: str):
         if not self.transaction_exists(hash_value):
             with self._get_connection() as conn:
