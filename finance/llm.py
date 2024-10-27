@@ -2,6 +2,16 @@ import requests
 import json
 from typing import Dict
 
+import json
+
+def is_valid_json(response: str) -> bool:
+    """Check if the response is a valid JSON string."""
+    try:
+        json.loads(response)
+        return True
+    except ValueError:
+        return False
+
 def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
     """Send a query to Ollama and return the parsed response."""
     url = "http://localhost:11434/api/generate"
