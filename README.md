@@ -4,11 +4,7 @@
 ## TODO
 - db indexes
 - up bank
-- move db to data folder
 - create UI for queries
-- prod/staging
-- parse date
-- source
 
 This tool loads data from a csv file and parses it into an SQLlite database. The data is then used to generate a report on the users spending habits.
 
