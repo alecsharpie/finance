@@ -3,7 +3,7 @@
 
 ## TODO
 - up bank
-- create UI for queries
+- more precise recurring memberships query
 
 # Overview
 
