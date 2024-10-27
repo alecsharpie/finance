@@ -7,8 +7,10 @@ Make sure ollama is running
 curl -v http://localhost:11434/
 ```
 
+Put your csv in the raw_data folder
+
 Run the python script with the input file
 ```bash
-python commbank.py -i "transactions.csv"
+python commbank.py -i "raw_data/transactions.csv"
 ```
 
