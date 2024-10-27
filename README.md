@@ -17,10 +17,10 @@ Check the model is available
 ollama list
 ```
 
-Put your csv in the raw_data folder
+Export your trasactions from commonwealth bank as a csv, and put this csv in the raw_data folder
 
 Run the python script with the input file
 ```bash
-python commbank.py -i "raw_data/transactions.csv"
+python finance/dataloader_commbank.py --i "raw_data/transactions.csv"
 ```
 

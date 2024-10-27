@@ -11,3 +11,5 @@ wheels/
 
 # Data
 raw_data/
+finance.db
+finance_staging.db

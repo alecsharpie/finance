@@ -1,12 +1,14 @@
 import csv
-from datetime import datetime
-import json
-from typing import Dict, List
+from typing import List
 import argparse
-import requests
 from tqdm import tqdm
 
-def create_prompt(transaction: List[str]) -> str:
+from db import FinanceDB, calculate_row_hash
+from llm import query_ollama, parse_json_response
+
+db = FinanceDB('finance.db')
+
+def create_commbank_prompt(transaction: List[str]) -> str:
     """Create a prompt for the LLM with examples and the current transaction."""
     if len(transaction) != 4:
         raise ValueError("Transaction list must contain at least three elements.")
@@ -27,7 +29,7 @@ Output:
     "location": null,
     "currency": null,
     "last_4_card_number": null,
-    "value_date": null
+    "date": null
 }}
 ```
 
@@ -40,7 +42,7 @@ Output:
     "location": "Fitzroy MELBOURNE AU AUS",
     "currency": "AUS",
     "last_4_card_number": "xx4321",
-    "value_date": "24/10/2024"
+    "date": "24/10/2024"
 }}
 ```
 
@@ -53,7 +55,7 @@ Output:
     "location": "NEWARK DE USA",
     "currency": "USD",
     "last_4_card_number": "xx1234",
-    "value_date": "21/10/2024"
+    "date": "21/10/2024"
 }}
 ```
 
@@ -66,7 +68,7 @@ Output:
     "location": null,
     "currency": null,
     "last_4_card_number": null,
-    "value_date": null
+    "date": null
 }}
 ```
 
@@ -79,7 +81,7 @@ Output:
     "location": null,
     "currency": null,
     "last_4_card_number": null,
-    "value_date": "20/10/2024"
+    "date": "20/10/2024"
 }}
 ```
 
@@ -92,7 +94,7 @@ Output:
     "location": null,
     "currency": null,
     "last_4_card_number": null,
-    "value_date": null
+    "date": null
 }}
 
 Now parse this transaction:
@@ -102,46 +104,25 @@ Output:
 
     return prompt
 
-def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
-    """Send a query to Ollama and return the parsed response."""
-    url = "http://localhost:11434/api/generate"
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False
-    }
-    
-    try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        llm_reseponse = response.json()['response']
-        json_result = json.loads(llm_reseponse.replace('```json\n', '').replace('\n```', ''))
-        return json_result
-    
-    except Exception as e:
-        print(f"Error querying Ollama: {str(e)}")
-        return {}
-
-def process_transactions_file(input_file: str, output_file: str, model: str = "gemma2:9b"):
-    """Process the entire transactions file using Ollama and write to new CSV."""
-    with open(input_file, 'r', newline='') as infile, \
-         open(output_file, 'w', newline='') as outfile:
+def process_commbank_transactions_file(input_file: str, model: str = "gemma2:9b"):
+    """Process the entire transactions file using Ollama and write to an sqllite db.
+    Expects a csv with columns: date, amount, original_description, balance.
+    E.g. 26/10/2024,'-7.73','UBER* TRIP','+232.41'"""
+    with open(input_file, 'r', newline='') as infile:
         
         reader = csv.reader(infile)
-        writer = csv.writer(outfile)
-        
-        headers = [
-            'date', 'amount', 'balance', 'original_description', 'merchant_name', 
-            'transaction_type', 'location', 'currency', 'last_4_card_number', 'value_date'
-        ]
-        writer.writerow(headers)
         
         for row in tqdm(reader):
             try:
-                prompt = create_prompt(row)
-                parsed_data = query_ollama(prompt, model)
+                row_hash = calculate_row_hash(','.join(row))
+                if db.row_exists(row_hash):
+                    continue
                 
-                output_row = [
+                prompt = create_commbank_prompt(row)
+                response = query_ollama(prompt, model)
+                parsed_data = parse_json_response(response)
+                
+                parsed_data = [
                     row[0],  # date
                     row[1],  # amount
                     row[3],  # balance
@@ -151,19 +132,16 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
                     parsed_data.get('location', ''),
                     parsed_data.get('currency', ''),
                     parsed_data.get('last_4_card_number', ''),
-                    parsed_data.get('value_date', '')
+                    parsed_data.get('date', '')
                 ]
-                writer.writerow(output_row)
-                
+                if parsed_data:
+                    db.insert_transaction(parsed_data, row_hash)
+                    
             except Exception as e:
                 print(f"Error processing row: {row}")
                 print(f"Error details: {str(e)}")
-
+                
 if __name__ == "__main__":
     argparse = argparse.ArgumentParser()
     argparse.add_argument("--input-file", "-i", help="Input file path", type=str)
-    input_file = argparse.parse_args().input_file
-    output_file = f"{input_file.split('.')[0]}_parsed.csv"
-    process_transactions_file(input_file, output_file, model="gemma2:2b")
-
-    
+    process_commbank_transactions_file(argparse.parse_args().input_file, model="gemma2:2b")
