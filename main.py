@@ -204,6 +204,16 @@ def get():
                     --text: #1A1A1A;         /* Almost black */
                     --text-light: #4A5568;   /* Medium grey */
                 }
+                
+                .body {
+                    background: var(--background);
+                    color: var(--text);
+                    font-family: 'Inter', -apple-system, sans-serif;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 0;
+                }
 
                 .table { 
                     width: 100%; 
