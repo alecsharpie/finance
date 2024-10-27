@@ -3,6 +3,7 @@ import hashlib
 import logging
 from contextlib import contextmanager
 from typing import Dict, Any
+import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +43,8 @@ class FinanceDB:
                 location TEXT,
                 currency TEXT,
                 last_4_card_number TEXT,
-                hash TEXT NOT NULL UNIQUE
+                hash TEXT NOT NULL UNIQUE,
+                source TEXT NOT NULL
             )
             ''')
             conn.commit()
@@ -52,8 +54,8 @@ class FinanceDB:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                INSERT INTO transactions (date, amount, balance, original_description, merchant_name, transaction_type, location, currency, last_4_card_number, hash)
-                VALUES (:date, :amount, :balance, :original_description, :merchant_name, :transaction_type, :location, :currency, :last_4_card_number, :hash)
+                INSERT INTO transactions (date, amount, balance, original_description, merchant_name, transaction_type, location, currency, last_4_card_number, hash, source)
+                VALUES (:date, :amount, :balance, :original_description, :merchant_name, :transaction_type, :location, :currency, :last_4_card_number, :hash, source)
                 ''', transaction_data)
                 conn.commit()
         else:
@@ -64,3 +66,13 @@ class FinanceDB:
             cursor = conn.cursor()
             cursor.execute('SELECT 1 FROM transactions WHERE hash = ?', (hash_value,))
             return cursor.fetchone() is not None
+        
+    def run_query(self, query: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+        
+    def run_query_pandas(self, query: str):
+        with self._get_connection() as conn:
+            return pd.read_sql_query(query, conn)
