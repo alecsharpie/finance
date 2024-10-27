@@ -2,19 +2,57 @@
 ## Finance Tool
 
 ## TODO
-- db indexes
 - up bank
 - create UI for queries
 
-This tool loads data from a csv file and parses it into an SQLlite database. The data is then used to generate a report on the users spending habits.
+# Overview
+
+This tool:
+- Parses bank transactions into structed & consistet data
+- Stores the data in a SQL Lite database
+- Provides a simple interface to query the data
+
+I use uv to manage the python environment, you can get uv here [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+#### Tree
+.
+├── README.md
+├── data
+│   ├── finance-prod.db
+│   └── finance-stag.db
+├── finance
+│   ├── dataloader_commbank.py
+│   ├── db.py
+│   └── llm.py
+├── main.py
+├── pyproject.toml
+├── raw_data
+│   ├── commbank_transactions.csv
+│   ├── upbank_transactions.csv
+└── uv.lock
 
 ## Database
 
-## Parsing Data
-## Commonwealth Bank
-The data is parsed from a csv file.
+We have a single table in the database called transactions. This table has the following columns:
+id INTEGER PRIMARY KEY,
+date DATE NOT NULL,
+amount REAL NOT NULL,
+balance REAL,
+original_description TEXT NOT NULL,
+merchant_name TEXT,
+transaction_type TEXT,
+location TEXT,
+currency TEXT,
+last_4_card_number TEXT,
+hash TEXT NOT NULL UNIQUE,
+source TEXT NOT NULL
 
-### Example Input
+## Usage - Parsing Data - Commonwealth Bank
+The data is parsed from a csv file exported from the [commonwealth bank website](https://www.commbank.com.au/). 
+
+The data comes in a janky format (and slowly and tediously) so we need to parse it into a structured format. We do this using a locally run, LLM: Gemma 2.
+
+For example:
 ````csv
 Input: 
 `"SP BENCHCLEARERS NEWARK DE USA Card xx1234 USD 55.98 Value Date: 21/10/2024"`
@@ -50,6 +88,11 @@ ollama list
 ```
 
 Export your trasactions from commonwealth bank as a csv, and put this csv in the raw_data folder
+
+setup the python environment
+```bash
+uv sync
+```
 
 Run the python script with the input file
 ```bash

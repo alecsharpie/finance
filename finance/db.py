@@ -32,8 +32,9 @@ def parse_date(date_str: str) -> str:
 class FinanceDB:
     def __init__(self, db_path: str = 'data/finance-stag.db'):
         self.db_path = db_path
-        self._ensure_db_exists(self.db_path)
+        self._ensure_db_exists()
         self._initialize_db()
+        self._create_indexes()
     
     @contextmanager
     def _get_connection(self):
@@ -43,13 +44,13 @@ class FinanceDB:
         finally:
             conn.close()
     
-    def _ensure_db_exists(self, db_path: str):
+    def _ensure_db_exists(self):
         """Ensure the database file exists, create it if it doesn't."""
-        if not os.path.exists(db_path):
-            with sqlite3.connect(db_path) as conn:
-                logger.info(f"Database created at {db_path}")
+        if not os.path.exists(self.db_path):
+            with sqlite3.connect(self.db_path) as conn:
+                logger.info(f"Database created at {self.db_path}")
         else:
-            logger.info(f"Database already exists at {db_path}")
+            logger.info(f"Database already exists at {self.db_path}")
     
     def _initialize_db(self):
         with self._get_connection() as conn:
@@ -72,11 +73,13 @@ class FinanceDB:
             ''')
             conn.commit()
     
-    def get_schema(self):
+    def _create_indexes(self):
         with self._get_connection() as conn:
-            query = "PRAGMA table_info(transactions)"
-            result = conn.run_query_pandas(query)
-            print(result)
+            cursor = conn.cursor()
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_merchant_name ON transactions (merchant_name);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_date ON transactions (date);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_amount ON transactions (amount);")
+            conn.commit()
     
     def insert_transaction(self, transaction_data: Dict[str, Any], hash_value: str):
         if not self.transaction_exists(hash_value):
@@ -105,3 +108,10 @@ class FinanceDB:
     def run_query_pandas(self, query: str):
         with self._get_connection() as conn:
             return pd.read_sql_query(query, conn)
+    
+    def get_schema(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "PRAGMA table_info(transactions)"
+            result = cursor.run_query_pandas(query)
+            print(result)
