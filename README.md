@@ -4,7 +4,7 @@
 ## TODO
 - up bank
 - more precise recurring memberships query
-- fix grpah alginment
+- fix graph alginment
 
 # Overview
 
