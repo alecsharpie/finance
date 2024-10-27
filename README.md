@@ -16,6 +16,7 @@ This tool:
 I use uv to manage the python environment, you can get uv here [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 #### Tree
+```
 .
 ├── README.md
 ├── data
@@ -24,6 +25,7 @@ I use uv to manage the python environment, you can get uv here [uv](https://docs
 ├── finance
 │   ├── dataloader_commbank.py
 │   ├── db.py
+│   ├── formatter.py
 │   └── llm.py
 ├── main.py
 ├── pyproject.toml
@@ -31,10 +33,12 @@ I use uv to manage the python environment, you can get uv here [uv](https://docs
 │   ├── commbank_transactions.csv
 │   ├── upbank_transactions.csv
 └── uv.lock
+```
 
 ## Database
 
 We have a single table in the database called transactions. This table has the following columns:
+```
 id INTEGER PRIMARY KEY,
 date DATE NOT NULL,
 amount REAL NOT NULL,
@@ -47,6 +51,7 @@ currency TEXT,
 last_4_card_number TEXT,
 hash TEXT NOT NULL UNIQUE,
 source TEXT NOT NULL
+```
 
 ## Usage - Parsing Data - Commonwealth Bank
 The data is parsed from a csv file exported from the [commonwealth bank website](https://www.commbank.com.au/). 
