@@ -4,7 +4,7 @@ from finance.formatter import FinanceFormatter, format_plotly_chart
 import plotly.express as px
 
 # Initialize database
-db = FinanceDB('data/finance-stag.db')
+db = FinanceDB('data/finance-prod.db')
 
 # Create FastHTML app
 app, rt = fast_app()
