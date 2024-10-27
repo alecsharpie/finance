@@ -4,49 +4,64 @@ import json
 from typing import Dict, List
 import argparse
 import requests
+from tqdm import tqdm
 
-def create_prompt(transaction: List[str], example_rows: List[str] = None) -> str:
+def create_prompt(transaction: List[str]) -> str:
     """Create a prompt for the LLM with examples and the current transaction."""
-    prompt = """Please parse the following bank transaction and extract key information in JSON format.
+    if len(transaction) != 4:
+        raise ValueError("Transaction list must contain at least three elements.")
+    
+    prompt = f"""Please parse the following bank transaction and extract key information in JSON format.
 Include these fields: merchant_name, location (if present), currency, card_number (if present), value_date (if present).
+
+Return only the JSON object, no additional text. If a field is not present, use null.
 
 Here are some examples of how to parse similar transactions:
 
-Input: "UBER* TRIP", amount: -7.73
-{
-    "merchant_name": "UBER",
+Input: "UBER* TRIP"
+Output:
+```json
+{{
+    "merchant_name": "UBER* TRIP",
     "location": null,
     "currency": null,
     "card_number": null,
     "value_date": null
-}
+}}
+```
 
-Input: "EZI*TPC Fitzroy MELBOURNE AU AUS Card xx7268 Value Date: 24/10/2024", amount: -16.70
-{
+Input: "EZI*TPC Fitzroy MELBOURNE AU AUS Card xx4321 Value Date: 24/10/2024"
+Output:
+```json
+{{
     "merchant_name": "EZI*TPC",
-    "location": "Fitzroy MELBOURNE AU",
+    "location": "Fitzroy MELBOURNE AU AUS",
     "currency": "AUS",
-    "card_number": "xxxx-xxxx-xxxx-7268",
+    "card_number": "xxxx-xxxx-xxxx-4321",
     "value_date": "24/10/2024"
-}
+}}
+```
 
-Input: "SP BENCHCLEARERS NEWARK DE USA Card xx2736 USD 55.98 Value Date: 21/10/2024", amount: -83.68
-{
+Input: "SP BENCHCLEARERS NEWARK DE USA Card xx1234 USD 55.98 Value Date: 21/10/2024"
+Output:
+```json
+{{
     "merchant_name": "SP BENCHCLEARERS",
     "location": "NEWARK DE USA",
     "currency": "USD",
-    "card_number": "xxxx-xxxx-xxxx-2736",
+    "card_number": "xxxx-xxxx-xxxx-1234",
     "value_date": "21/10/2024"
-}
+}}
+```
 
 Now parse this transaction:
-Input: "{}", amount: {}
+Input: "{transaction[2]}"
+Output:
+"""
 
-Return only the JSON object, no additional text."""
+    return prompt
 
-    return prompt.format(transaction[2], transaction[1])
-
-def query_ollama(prompt: str, model: str = "gemma:7b") -> Dict:
+def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
     """Send a query to Ollama and return the parsed response."""
     url = "http://localhost:11434/api/generate"
     payload = {
@@ -59,13 +74,17 @@ def query_ollama(prompt: str, model: str = "gemma:7b") -> Dict:
         response = requests.post(url, json=payload)
         response.raise_for_status()
         result = response.json()
+        
         # Parse the response as JSON
-        return json.loads(result['response'])
+        llm_reseponse = result['response']
+        json_result = json.loads(llm_reseponse.replace('```json\n', '').replace('\n```', ''))
+        return json_result
+    
     except Exception as e:
         print(f"Error querying Ollama: {str(e)}")
         return {}
 
-def process_transactions_file(input_file: str, output_file: str, model: str = "gemma:7b"):
+def process_transactions_file(input_file: str, output_file: str, model: str = "gemma2:9b"):
     """Process the entire transactions file using Ollama and write to new CSV."""
     with open(input_file, 'r', newline='') as infile, \
          open(output_file, 'w', newline='') as outfile:
@@ -75,16 +94,17 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
         
         # Write header
         headers = [
-            'date', 'amount', 'balance', 'merchant_name', 'location',
-            'currency', 'card_number', 'value_date', 'original_description'
+            'date', 'amount', 'balance', 'original_description', 'merchant_name', 'location',
+            'currency', 'card_number', 'value_date'
         ]
         writer.writerow(headers)
         
         # Process each transaction
-        for row in reader:
+        for row in tqdm(reader):
             try:
                 # Query Ollama for parsing
                 prompt = create_prompt(row)
+                # print(prompt)
                 parsed_data = query_ollama(prompt, model)
                 
                 # Combine original data with parsed data
@@ -92,12 +112,12 @@ def process_transactions_file(input_file: str, output_file: str, model: str = "g
                     row[0],  # date
                     row[1],  # amount
                     row[3],  # balance
+                    row[2],   # original_description
                     parsed_data.get('merchant_name', ''),
                     parsed_data.get('location', ''),
                     parsed_data.get('currency', ''),
                     parsed_data.get('card_number', ''),
-                    parsed_data.get('value_date', ''),
-                    row[2]   # original_description
+                    parsed_data.get('value_date', '')
                 ]
                 writer.writerow(output_row)
                 
@@ -110,6 +130,6 @@ if __name__ == "__main__":
     argparse.add_argument("--input-file", "-i", help="Input file path", type=str)
     input_file = argparse.parse_args().input_file
     output_file = f"{input_file.split('.')[0]}_parsed.csv"
-    process_transactions_file(input_file, output_file)
+    process_transactions_file(input_file, output_file, model="gemma2:latest")
 
     
