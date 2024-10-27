@@ -21,19 +21,21 @@ def dataframe_to_table(df):
 # Recurring Transactions
 
 def get_recurring_transactions():
+    """Get recurring transactions from the database.
+    normalise the amount to be monthly so the comparison is fair i.e $120 every 12 months would be $10 every month"""
     query = """
-    SELECT 
-        merchant_name, 
-        amount, 
+    SELECT
+        merchant_name,
+        amount,
         COUNT(*) as occurrence_count
-    FROM 
+    FROM
         transactions
-    GROUP BY 
-        merchant_name, 
+    GROUP BY
+        merchant_name,
         amount
-    HAVING 
+    HAVING
         COUNT(*) > 1
-    ORDER BY 
+    ORDER BY
         occurrence_count DESC;
     """
     return db.run_query_pandas(query)
@@ -45,16 +47,15 @@ def get_count_of_each_merchant():
         COUNT(*) as transaction_count
     FROM 
         transactions
-    GROUP BY 
+    GROUP BY
         merchant_name
-    ORDER BY 
+    ORDER BY
         transaction_count DESC;
     """
     return db.run_query_pandas(query)
 
 def create_merchant_bar_chart():
     df = get_count_of_each_merchant()
-    # Take top 10 merchants for better visualization
     df = df.head(10)
     
     fig = px.bar(
@@ -75,12 +76,6 @@ def get():
     return Titled(
         "Finance Dashboard",
         Container(
-            # Merchant Count Chart Section
-            Card(
-                H2("Merchant Transaction Counts"),
-                Div(NotStr(create_merchant_bar_chart()))
-            ),
-            
             # Recurring Transactions Table
             Card(
                 H2("Recurring Transactions"),
@@ -93,6 +88,11 @@ def get():
                 H2("All Merchant Counts"),
                 Div(dataframe_to_table(merchants_df.head(10)),
                     style="overflow-x: auto;")
+            ),
+            # Merchant Count Chart
+            Card(
+                H2("Merchant Transaction Counts"),
+                Div(NotStr(create_merchant_bar_chart()))
             ),
             
             # Add some basic styling
