@@ -105,9 +105,9 @@ class FinanceDB:
             cursor.execute(query)
             return cursor.fetchall()
         
-    def run_query_pandas(self, query: str):
+    def run_query_pandas(self, query: str, params=None):
         with self._get_connection() as conn:
-            return pd.read_sql_query(query, conn)
+            return pd.read_sql_query(query, conn, params=params)
     
     def get_schema(self):
         with self._get_connection() as conn:
