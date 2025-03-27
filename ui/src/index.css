@@ -1,0 +1,112 @@
+:root {
+  --primary: #6B46C1;      /* Deep purple */
+  --secondary: #0D9488;    /* Rich teal */
+  --accent: #F76B8A;       /* Coral pink */
+  --background: #F8FAFC;   /* Light grey background */
+  --text: #1A1A1A;         /* Almost black */
+  --text-light: #4A5568;   /* Medium grey */
+  --card-shadow: 0 1px 3px rgba(107, 70, 193, 0.1);
+  --card-border: 1px solid rgba(107, 70, 193, 0.1);
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+h2 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--primary);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: var(--accent);
+}
+
+h3 {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.5rem 0 1rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Table styling */
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  box-shadow: var(--card-shadow);
+}
+
+th, td {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--background);
+}
+
+th {
+  background: var(--primary);
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.9rem;
+}
+
+tr {
+  background: white;
+}
+
+tr:nth-child(even) {
+  background: #FAFAFA;
+}
+
+/* Format currency values */
+td.currency-value {
+  text-align: right;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 500;
+}
+
+/* Card styling */
+.card {
+  background: white;
+  box-shadow: var(--card-shadow);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: var(--card-border);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+} 
