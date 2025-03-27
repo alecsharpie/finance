@@ -109,4 +109,265 @@ td.currency-value {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
+}
+
+/* Subscription Tracker Styles */
+.subscription-tracker {
+  margin-bottom: 2rem;
+}
+
+.month-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.current-month {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nav-button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+  background-color: var(--accent);
+}
+
+.calendar-grid {
+  margin-bottom: 2rem;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-weight: 600;
+  padding: 0.5rem;
+  background-color: var(--primary);
+  color: white;
+  border-radius: 4px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  min-height: 100px;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.calendar-day.empty {
+  background-color: #f7fafc;
+  border: 1px dashed #e2e8f0;
+}
+
+.calendar-day.has-subscriptions {
+  background-color: rgba(107, 70, 193, 0.1);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendar-day.has-subscriptions:hover {
+  background-color: rgba(107, 70, 193, 0.2);
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.day-number {
+  font-weight: 600;
+}
+
+.day-amount {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.day-subscriptions {
+  font-size: 0.75rem;
+}
+
+.day-subscription-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.subscription-list {
+  margin-top: 2rem;
+}
+
+.subscription-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.subscription-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: white;
+}
+
+.subscription-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.subscription-frequency {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.subscription-amount {
+  text-align: right;
+}
+
+.amount-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.amount-yearly {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.subscription-transactions {
+  font-size: 0.875rem;
+}
+
+.transactions-header {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.subscription-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.subscription-detail-modal {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-light);
+}
+
+.detail-transaction-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.transaction-amount {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.transaction-description {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* Add these styles to the existing subscription tracker styles */
+
+.subscription-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.show-all-toggle {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-light);
+  cursor: pointer;
+}
+
+.show-all-toggle input {
+  margin-right: 0.5rem;
+}
+
+.toggle-label {
+  user-select: none;
 } 

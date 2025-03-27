@@ -4,6 +4,7 @@ import RecurringTransactions from './components/RecurringTransactions';
 import MonthlySpending from './components/MonthlySpending';
 import MerchantCounts from './components/MerchantCounts';
 import MerchantChart from './components/MerchantChart';
+import SubscriptionTracker from './components/SubscriptionTracker';
 
 function App() {
   return (
@@ -15,6 +16,11 @@ function App() {
       }}>
         Finance Dashboard
       </h1>
+      
+      <div className="card">
+        <h2>Subscription Tracker</h2>
+        <SubscriptionTracker />
+      </div>
       
       <div className="card">
         <RecentTransaction />
