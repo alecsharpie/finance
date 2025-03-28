@@ -103,18 +103,42 @@ export const createCategory = async (categoryData) => {
 
 export const fetchMerchantCategories = async (merchantName) => {
   try {
-    // Double encode the merchant name to handle special characters
-    const encodedMerchantName = encodeURIComponent(merchantName);
-    const response = await axios.get(`${API_BASE_URL}/merchants/${encodedMerchantName}/categories`);
-    return response.data;
+    // Check if we've already tried to fetch this merchant's categories recently
+    // This helps avoid repeated 404 errors for the same merchant
+    const cacheKey = `merchant_category_${merchantName}`;
+    const cachedResult = sessionStorage.getItem(cacheKey);
+    
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+    
+    const response = await axios.get(`${API_BASE_URL}/merchants/${encodeURIComponent(merchantName)}/categories`);
+    const data = response.data;
+    
+    // Cache the result for 5 minutes
+    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+    sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+    
+    return data;
   } catch (error) {
-    // Return empty array instead of throwing error for merchants with no categories
+    // Instead of logging every 404, just cache an empty result
     if (error.response && error.response.status === 404) {
-      console.log(`No categories found for merchant: ${merchantName}`);
+      // Cache empty result to prevent repeated requests
+      const cacheKey = `merchant_category_${merchantName}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify([]));
+      sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+      
+      // Only log in development environment
+      if (process.env.NODE_ENV === 'development') {
+        // Use a more subtle console method
+        console.debug(`No categories found for merchant: ${merchantName}`);
+      }
       return [];
     }
+    
+    // For other errors, still log them but return empty array
     console.error(`Error fetching categories for merchant ${merchantName}:`, error);
-    return [];  // Return empty array to avoid breaking the UI
+    return [];
   }
 };
 

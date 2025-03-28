@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRawTransactions } from '../services/api';
+import { fetchRawTransactions, fetchCategories, fetchMerchantCategories } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const RawTransactions = () => {
@@ -9,6 +9,8 @@ const RawTransactions = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [merchantCategories, setMerchantCategories] = useState({});
   
   // New state for filters and sorting
   const [filters, setFilters] = useState({
@@ -17,7 +19,8 @@ const RawTransactions = () => {
     amountMin: '',
     amountMax: '',
     type: '',
-    source: ''
+    source: '',
+    category: ''
   });
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const [showFilters, setShowFilters] = useState(false);
@@ -51,6 +54,55 @@ const RawTransactions = () => {
 
     loadTransactions();
   }, [pagination.limit, pagination.offset]);
+
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesData = await fetchCategories();
+        setCategories(categoriesData || []);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    
+    loadCategories();
+  }, []);
+
+  // Load merchant categories for transactions
+  useEffect(() => {
+    const loadMerchantCategories = async () => {
+      if (!transactions.length) return;
+      
+      const merchantCategoriesMap = {};
+      
+      // Process merchants in batches to avoid too many concurrent requests
+      const uniqueMerchants = [...new Set(transactions
+        .filter(tx => tx.merchant_name)
+        .map(tx => tx.merchant_name))];
+      
+      const batchSize = 10;
+      for (let i = 0; i < uniqueMerchants.length; i += batchSize) {
+        const batch = uniqueMerchants.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (merchantName) => {
+          try {
+            const categoriesData = await fetchMerchantCategories(merchantName);
+            if (categoriesData && categoriesData.length > 0) {
+              merchantCategoriesMap[merchantName] = categoriesData[0].id;
+            }
+          } catch (err) {
+            // Just log the error but continue processing
+            console.error(`Error loading categories for ${merchantName}:`, err);
+          }
+        }));
+      }
+      
+      setMerchantCategories(merchantCategoriesMap);
+    };
+    
+    loadMerchantCategories();
+  }, [transactions]);
 
   // Apply search, filters, and sorting
   useEffect(() => {
@@ -94,6 +146,13 @@ const RawTransactions = () => {
       filtered = filtered.filter(tx => tx.source === filters.source);
     }
     
+    // Filter by category
+    if (filters.category) {
+      filtered = filtered.filter(tx => 
+        tx.merchant_name && merchantCategories[tx.merchant_name] === parseInt(filters.category)
+      );
+    }
+    
     // Apply sorting
     if (sortConfig.key) {
       filtered.sort((a, b) => {
@@ -123,7 +182,7 @@ const RawTransactions = () => {
     }
     
     setFilteredTransactions(filtered);
-  }, [searchTerm, transactions, filters, sortConfig]);
+  }, [searchTerm, transactions, filters, sortConfig, merchantCategories]);
 
   const handleNextPage = () => {
     if (pagination.offset + pagination.limit < pagination.total) {
@@ -173,7 +232,8 @@ const RawTransactions = () => {
       amountMin: '',
       amountMax: '',
       type: '',
-      source: ''
+      source: '',
+      category: ''
     });
     setSearchTerm('');
   };
@@ -328,6 +388,22 @@ const RawTransactions = () => {
                 ))}
               </select>
             </div>
+            
+            <div className="filter-group">
+              <label>Category</label>
+              <select
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+              >
+                <option value="">All Categories</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon} {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           
           <div className="filter-actions">
@@ -366,25 +442,41 @@ const RawTransactions = () => {
               <th onClick={() => handleSort('source')} className="sortable-header">
                 Source {getSortIndicator('source')}
               </th>
+              <th>Category</th>
             </tr>
           </thead>
           <tbody>
             {filteredTransactions.length > 0 ? (
-              filteredTransactions.map(tx => (
-                <tr key={tx.id}>
-                  <td>{tx.date}</td>
-                  <td className={`amount ${parseFloat(tx.amount) < 0 ? 'negative' : 'positive'}`}>
-                    {formatCurrency(tx.amount)}
-                  </td>
-                  <td>{tx.merchant_name || '-'}</td>
-                  <td className="description">{tx.original_description}</td>
-                  <td>{tx.transaction_type || '-'}</td>
-                  <td>{tx.source}</td>
-                </tr>
-              ))
+              filteredTransactions.map(tx => {
+                const categoryId = tx.merchant_name ? merchantCategories[tx.merchant_name] : null;
+                const category = categoryId ? categories.find(c => c.id === categoryId) : null;
+                
+                return (
+                  <tr key={tx.id}>
+                    <td>{tx.date}</td>
+                    <td className={`amount ${parseFloat(tx.amount) < 0 ? 'negative' : 'positive'}`}>
+                      {formatCurrency(tx.amount)}
+                    </td>
+                    <td>{tx.merchant_name || '-'}</td>
+                    <td className="description">{tx.original_description}</td>
+                    <td>{tx.transaction_type || '-'}</td>
+                    <td>{tx.source}</td>
+                    <td>
+                      {category && (
+                        <span 
+                          className="category-tag" 
+                          style={{backgroundColor: category.color, color: '#fff'}}
+                        >
+                          {category.icon} {category.name}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan="6" className="no-results">
+                <td colSpan="7" className="no-results">
                   No transactions match your filters
                 </td>
               </tr>

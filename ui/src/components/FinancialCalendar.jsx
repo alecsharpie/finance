@@ -178,18 +178,22 @@ const FinancialCalendar = () => {
   };
 
   const renderCategoryBars = (categories) => {
-    if (!categories || Object.keys(categories).length === 0) {
+    // Create a combined categories object that includes uncategorized transactions
+    const combinedCategories = { ...categories };
+    
+    // If there are no categories at all, still show the no data message
+    if (!categories || (Object.keys(categories).length === 0 && !combinedCategories['Uncategorized'])) {
       return <div className="no-data">No category data</div>;
     }
 
-    const totalAmount = Object.values(categories).reduce((sum, cat) => sum + cat.total, 0);
+    const totalAmount = Object.values(combinedCategories).reduce((sum, cat) => sum + cat.total, 0);
     
     return (
       <div className="category-bars">
-        {Object.entries(categories).map(([name, data]) => (
+        {Object.entries(combinedCategories).map(([name, data]) => (
           <div key={name} className="category-bar-container">
             <div className="category-bar-label">
-              <span className="category-icon" style={{ backgroundColor: data.color }}>
+              <span className="category-icon" style={{ backgroundColor: data.color || '#CCCCCC' }}>
                 {data.icon || '📊'}
               </span>
               <span>{name}</span>
@@ -200,7 +204,7 @@ const FinancialCalendar = () => {
                 className="category-bar" 
                 style={{ 
                   width: `${(data.total / totalAmount) * 100}%`,
-                  backgroundColor: data.color || '#7D6B91'
+                  backgroundColor: data.color || '#CCCCCC'
                 }}
               />
             </div>
@@ -264,17 +268,8 @@ const FinancialCalendar = () => {
       
       console.log("Day data for hourly view:", dayData); // Debug log
       
-      // Combine recurring and one-time transactions without distinguishing them
-      const allTransactions = [];
-      
-      // Add all transactions without marking them as recurring or one-time
-      if (dayData.recurring && dayData.recurring.transactions) {
-        allTransactions.push(...dayData.recurring.transactions);
-      }
-      
-      if (dayData['one-time'] && dayData['one-time'].transactions) {
-        allTransactions.push(...dayData['one-time'].transactions);
-      }
+      // Get all transactions from the new data structure
+      const allTransactions = dayData.transactions || [];
       
       console.log("All transactions:", allTransactions); // Debug log
       
@@ -308,10 +303,26 @@ const FinancialCalendar = () => {
       });
       
       // Get all categories for color coding
-      const allCategories = {
-        ...(dayData.recurring?.categories || {}),
-        ...(dayData['one-time']?.categories || {})
-      };
+      const allCategories = dayData.categories || {};
+      
+      // Fix the time formatting for hourly view
+      const formatHourlyTime = (timeString) => {
+        if (!timeString) return '';
+        
+        // Check if timeString is already a full ISO date string
+        if (timeString.includes('T')) {
+          return new Date(timeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // If it's just a time string (HH:MM:SS), create a valid date by combining with drillDownPeriod
+        try {
+          const fullDateTimeString = `${drillDownPeriod}T${timeString}`;
+          return new Date(fullDateTimeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          console.error("Error formatting time:", e);
+          return timeString; // Return the original string if parsing fails
+        }
+      }
       
       return (
         <div className="hourly-view">
@@ -330,7 +341,19 @@ const FinancialCalendar = () => {
                   
                   <div className="transactions-list">
                     {transactions.map((tx, index) => {
-                      const categoryData = tx.category ? allCategories[tx.category] : null;
+                      // Find the category for this merchant
+                      let categoryName = null;
+                      let categoryData = null;
+                      
+                      // Look up the category in allCategories
+                      for (const [name, data] of Object.entries(allCategories)) {
+                        if (data.merchants && data.merchants.includes(tx.merchant_name)) {
+                          categoryName = name;
+                          categoryData = data;
+                          break;
+                        }
+                      }
+                      
                       const categoryColor = categoryData?.color || '#CCCCCC';
                       
                       return (
@@ -340,28 +363,28 @@ const FinancialCalendar = () => {
                           style={{ borderLeft: `4px solid ${categoryColor}` }}
                         >
                           <div className="transaction-time">
-                            {tx.time || `${hour.padStart(2, '0')}:00`}
+                            {tx.time ? formatHourlyTime(tx.time) : ''}
                           </div>
                           <div className="transaction-merchant">
-                            {tx.merchant || 'Unknown'}
+                            {tx.merchant_name || 'Unknown'}
                           </div>
                           <div className="transaction-description">
-                            {tx.description || tx.original_description || '-'}
+                            {tx.description || '-'}
                           </div>
                           <div className="transaction-category">
-                            {tx.category ? (
+                            {categoryName ? (
                               <span className="category-tag" style={{
                                 backgroundColor: categoryColor,
                                 color: '#fff'
                               }}>
-                                {categoryData?.icon || '📊'} {tx.category}
+                                {categoryData?.icon || '📊'} {categoryName}
                               </span>
                             ) : (
                               <span className="uncategorized">Uncategorized</span>
                             )}
                           </div>
                           <div className="transaction-amount">
-                            {formatCurrency(tx.amount)}
+                            {formatCurrency(Math.abs(tx.amount))}
                           </div>
                         </div>
                       );
@@ -488,30 +511,33 @@ const FinancialCalendar = () => {
             {periods.map(period => {
               const data = timelineData[period];
               
-              // Combine categories from both recurring and one-time transactions
-              const allCategories = {};
+              // Combine all transactions regardless of recurring status
+              const allTransactions = [...(data.transactions || [])];
+              const totalAmount = Math.abs(data.total || 0);
               
               // Process all categories together
-              const processCategories = (categories, totals) => {
-                Object.entries(categories).forEach(([name, categoryData]) => {
-                  if (!allCategories[name]) {
-                    allCategories[name] = { ...categoryData, total: 0 };
-                  }
-                  allCategories[name].total += categoryData.total;
-                });
-              };
+              const allCategories = {};
               
-              // Process recurring and one-time categories together
-              processCategories(data.recurring.categories, data.recurring.total);
-              processCategories(data['one-time'].categories, data['one-time'].total);
+              // First, add existing categories
+              Object.entries(data.categories || {}).forEach(([name, categoryData]) => {
+                if (!allCategories[name]) {
+                  allCategories[name] = { ...categoryData, total: Math.abs(categoryData.amount || 0) };
+                }
+              });
               
-              // Calculate total spending (combined)
-              const totalSpending = data.recurring.total + data['one-time'].total;
+              // Calculate total amount in categorized transactions
+              const categorizedTotal = Object.values(allCategories).reduce((sum, cat) => sum + cat.total, 0);
               
-              // Get top categories (limit to 3 for display)
-              const topCategories = Object.entries(allCategories)
-                .sort((a, b) => b[1].total - a[1].total)
-                .slice(0, 3);
+              // If there's a difference between total amount and categorized total, add an Uncategorized category
+              const uncategorizedAmount = totalAmount - categorizedTotal;
+              if (uncategorizedAmount > 0) {
+                allCategories['Uncategorized'] = {
+                  total: uncategorizedAmount,
+                  count: allTransactions.length - Object.values(allCategories).reduce((sum, cat) => sum + (cat.count || 0), 0),
+                  color: '#CCCCCC',
+                  icon: '❓'
+                };
+              }
               
               const isToday = viewMode === 'daily' && period === new Date().toISOString().split('T')[0];
               
@@ -527,18 +553,18 @@ const FinancialCalendar = () => {
                   </div>
                   
                   <div className="amount-display">
-                    <div className="total-amount">{formatCurrency(totalSpending)}</div>
+                    <div className="total-amount">{formatCurrency(totalAmount)}</div>
                   </div>
                   
                   <div className="spending-bars-container">
-                    {topCategories.length > 0 ? (
-                      topCategories.map(([name, categoryData], index) => (
+                    {Object.entries(allCategories).length > 0 ? (
+                      Object.entries(allCategories).map(([name, categoryData]) => (
                         <div key={name} className="bar-container-with-label">
                           <div className="bar-header">
-                            <span className="bar-label" style={{ color: categoryData.color || '#7D6B91' }}>
+                            <span className="bar-label" style={{ color: categoryData.color || '#CCCCCC' }}>
                               {categoryData.icon || '📊'} {name}
                             </span>
-                            <span className="bar-amount" style={{ color: categoryData.color || '#7D6B91' }}>
+                            <span className="bar-amount" style={{ color: categoryData.color || '#CCCCCC' }}>
                               {formatCurrency(categoryData.total)}
                             </span>
                           </div>
@@ -546,8 +572,8 @@ const FinancialCalendar = () => {
                             <div 
                               className="spending-bar" 
                               style={{ 
-                                width: `${(categoryData.total / totalSpending) * 100}%`,
-                                backgroundColor: categoryData.color || '#7D6B91'
+                                width: `${(categoryData.total / totalAmount) * 100}%`,
+                                backgroundColor: categoryData.color || '#CCCCCC'
                               }} 
                             />
                           </div>

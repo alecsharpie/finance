@@ -127,3 +127,31 @@ class FinanceDB:
             query = "PRAGMA table_info(transactions)"
             result = pd.read_sql_query(query, conn)
             return result
+
+    def get_merchant_categories(self, merchant_name):
+        """Get categories for a specific merchant."""
+        try:
+            query = """
+            SELECT 
+                c.id, 
+                c.name, 
+                c.color, 
+                c.icon
+            FROM 
+                categories c
+            JOIN 
+                merchant_categories mc ON c.id = mc.category_id
+            WHERE 
+                mc.merchant_name = ?;
+            """
+            
+            with self._get_connection() as conn:
+                df = pd.read_sql_query(query, conn, params=(merchant_name,))
+                
+            if df.empty:
+                return []
+                
+            return df.to_dict(orient="records")
+        except Exception as e:
+            print(f"Error getting categories for merchant {merchant_name}: {e}")
+            return []

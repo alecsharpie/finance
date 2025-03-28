@@ -69,27 +69,38 @@ const MerchantCategoryManager = () => {
     const loadAllMerchantCategories = async () => {
       if (!merchants.length) return;
       
+      setLoading(true);
       const merchantCategoriesMap = {};
       
-      // Process merchants in batches to avoid too many concurrent requests
-      const batchSize = 10;
+      // Process merchants in larger batches to reduce console noise
+      const batchSize = 25;
       for (let i = 0; i < merchants.length; i += batchSize) {
         const batch = merchants.slice(i, i + batchSize);
         
-        await Promise.all(batch.map(async (merchant) => {
+        // Use Promise.allSettled instead of Promise.all to handle errors gracefully
+        const results = await Promise.allSettled(batch.map(async (merchant) => {
           try {
             const categoriesData = await fetchMerchantCategories(merchant.merchant_name);
             if (categoriesData && categoriesData.length > 0) {
-              merchantCategoriesMap[merchant.merchant_name] = categoriesData[0].id;
+              return { merchantName: merchant.merchant_name, categoryId: categoriesData[0].id };
             }
+            return null;
           } catch (err) {
-            // Just log the error but continue processing
-            console.error(`Error loading categories for ${merchant.merchant_name}:`, err);
+            // Just return null on error
+            return null;
           }
         }));
+        
+        // Process successful results
+        results.forEach(result => {
+          if (result.status === 'fulfilled' && result.value) {
+            merchantCategoriesMap[result.value.merchantName] = result.value.categoryId;
+          }
+        });
       }
       
       setMerchantCategories(merchantCategoriesMap);
+      setLoading(false);
     };
     
     loadAllMerchantCategories();

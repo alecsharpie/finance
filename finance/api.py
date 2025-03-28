@@ -611,7 +611,8 @@ def get_transaction_timeline_with_categories(
             t.transaction_type,
             c.id as category_id,
             c.name as category_name,
-            c.color as category_color
+            c.color as category_color,
+            c.icon as category_icon
         FROM 
             transactions t
         LEFT JOIN 
@@ -645,101 +646,49 @@ def get_transaction_timeline_with_categories(
         # Add period column
         df['period'] = df['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').strftime(period_format))
         
-        # Identify recurring transactions (simplified approach)
-        # Group by merchant and amount, count occurrences
-        merchant_counts = df.groupby(['merchant_name', 'amount']).size().reset_index(name='count')
-        recurring_merchants = set(merchant_counts[merchant_counts['count'] > 1]['merchant_name'])
-        
-        # Mark transactions as recurring or one-time
-        df['is_recurring'] = df['merchant_name'].apply(lambda x: x in recurring_merchants)
-        
-        # Group by period, transaction type (recurring vs one-time), and category
+        # Group by period and category
         result = {}
         for period in df['period'].unique():
             period_df = df[df['period'] == period]
             
             # Initialize period data
             result[period] = {
-                'recurring': {
-                    'total': 0,
-                    'transactions': [],
-                    'categories': {}
-                },
-                'one-time': {
-                    'total': 0,
-                    'transactions': [],
-                    'categories': {}
-                }
+                'total': float(period_df['amount'].sum()),
+                'transactions': [],
+                'categories': {}
             }
             
-            # Process recurring transactions
-            recurring_df = period_df[period_df['is_recurring']]
-            if not recurring_df.empty:
-                result[period]['recurring']['total'] = abs(recurring_df['amount'].sum())
+            # Process transactions and organize by category
+            for _, tx in period_df.iterrows():
+                tx_dict = tx.to_dict()
                 
-                # Group by category
-                for category_id in recurring_df['category_id'].unique():
-                    if pd.isna(category_id):
-                        category_name = "Uncategorized"
-                        category_color = "#CCCCCC"
-                    else:
-                        category_row = recurring_df[recurring_df['category_id'] == category_id].iloc[0]
-                        category_name = category_row['category_name']
-                        category_color = category_row['category_color']
-                    
-                    category_df = recurring_df[recurring_df['category_id'] == category_id] if not pd.isna(category_id) else recurring_df[recurring_df['category_id'].isna()]
-                    category_total = abs(category_df['amount'].sum())
-                    
-                    result[period]['recurring']['categories'][category_name] = {
-                        'total': float(category_total),
-                        'color': category_color
-                    }
+                # Add to transactions list
+                result[period]['transactions'].append({
+                    'date': tx_dict['date'],
+                    'amount': float(tx_dict['amount']),
+                    'merchant_name': tx_dict['merchant_name'],
+                    'description': tx_dict.get('original_description', '')
+                })
                 
-                # Add transactions
-                for _, row in recurring_df.iterrows():
-                    result[period]['recurring']['transactions'].append({
-                        'merchant': row['merchant_name'],
-                        'amount': abs(float(row['amount'])),
-                        'type': row['transaction_type'],
-                        'category': row['category_name'] if not pd.isna(row['category_name']) else "Uncategorized",
-                        'count': int(merchant_counts[(merchant_counts['merchant_name'] == row['merchant_name']) & 
-                                                  (merchant_counts['amount'] == row['amount'])]['count'].values[0])
-                    })
-            
-            # Process one-time transactions
-            onetime_df = period_df[~period_df['is_recurring']]
-            if not onetime_df.empty:
-                result[period]['one-time']['total'] = abs(onetime_df['amount'].sum())
-                
-                # Group by category
-                for category_id in onetime_df['category_id'].unique():
-                    if pd.isna(category_id):
-                        category_name = "Uncategorized"
-                        category_color = "#CCCCCC"
-                    else:
-                        category_row = onetime_df[onetime_df['category_id'] == category_id].iloc[0]
-                        category_name = category_row['category_name']
-                        category_color = category_row['category_color']
+                # Add to category breakdown
+                if pd.notna(tx_dict['category_name']):
+                    category_name = tx_dict['category_name']
                     
-                    category_df = onetime_df[onetime_df['category_id'] == category_id] if not pd.isna(category_id) else onetime_df[onetime_df['category_id'].isna()]
-                    category_total = abs(category_df['amount'].sum())
+                    if category_name not in result[period]['categories']:
+                        result[period]['categories'][category_name] = {
+                            'amount': 0,
+                            'count': 0,
+                            'color': tx_dict['category_color'],
+                            'icon': tx_dict['category_icon']
+                        }
                     
-                    result[period]['one-time']['categories'][category_name] = {
-                        'total': float(category_total),
-                        'color': category_color
-                    }
-                
-                # Add transactions
-                for _, row in onetime_df.iterrows():
-                    result[period]['one-time']['transactions'].append({
-                        'merchant': row['merchant_name'],
-                        'amount': abs(float(row['amount'])),
-                        'type': row['transaction_type'],
-                        'category': row['category_name'] if not pd.isna(row['category_name']) else "Uncategorized"
-                    })
-            
+                    result[period]['categories'][category_name]['amount'] += float(tx_dict['amount'])
+                    result[period]['categories'][category_name]['count'] += 1
+        
         return result
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to fetch transaction timeline with categories: {str(e)}")
 
 @app.delete("/categories/{category_id}")
