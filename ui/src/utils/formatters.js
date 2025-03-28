@@ -1,24 +1,22 @@
 // Format currency values
-export const formatCurrency = (value) => {
-  if (value === null || value === undefined || isNaN(value)) {
-    return '$0.00';
-  }
+export const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2
-  }).format(Math.abs(parseFloat(value)));
+  }).format(amount || 0);
 };
 
 // Format date to a more readable format
-export const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(date);
+export const formatDate = (date, viewMode = 'monthly') => {
+  const options = {
+    yearly: { year: 'numeric' },
+    monthly: { month: 'long', year: 'numeric' },
+    daily: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' },
+    hourly: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric' }
+  };
+  
+  return new Date(date).toLocaleDateString('en-US', options[viewMode] || options.monthly);
 };
 
 // Convert snake_case or any case to Title Case

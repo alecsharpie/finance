@@ -651,4 +651,186 @@ td.currency-value {
   color: var(--text-light);
   margin-top: 0.25rem;
   font-family: 'Roboto Mono', monospace;
+}
+
+.financial-calendar {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.zoom-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary);
+  background: white;
+  color: var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.zoom-controls button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.time-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-block:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.time-block.selected {
+  border-color: var(--primary);
+  background: rgba(107, 70, 193, 0.05);
+}
+
+.time-block-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.period-label {
+  font-weight: 500;
+}
+
+.total-amount {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.spending-bars {
+  height: 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 0.75rem;
+}
+
+.recurring-bar {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.one-time-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.merchant-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.merchant-tag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--text-light);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merchant-tag.merchant {
+  background: rgba(107, 70, 193, 0.1);
+  color: var(--primary);
+}
+
+.merchant-tag.transfer {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--secondary);
+}
+
+.period-detail {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.5rem;
+}
+
+.spending-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.summary-section h4 {
+  margin-bottom: 1rem;
+  color: var(--text-light);
+}
+
+.summary-section .amount {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.transaction-item .merchant {
+  flex: 1;
+}
+
+.transaction-item .amount {
+  font-family: 'Roboto Mono', monospace;
+  color: var(--text);
+  margin: 0 1rem;
+}
+
+.transaction-item .frequency {
+  color: var(--text-light);
+  font-size: 0.875rem;
 } 

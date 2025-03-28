@@ -54,10 +54,17 @@ export const fetchSubscriptions = async () => {
   }
 };
 
-export const fetchTransactionTimeline = async () => {
+export const fetchTransactionTimeline = async ({ start_date, end_date, view_mode }) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/transactions/timeline`);
-    return response.data;
+    const response = await fetch(
+      `${API_BASE_URL}/transactions/timeline?start_date=${start_date}&end_date=${end_date}&view_mode=${view_mode}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    return await response.json();
   } catch (error) {
     console.error('Error fetching transaction timeline:', error);
     throw error;
