@@ -113,12 +113,18 @@ const FinancialCalendar = () => {
       return periodTotal > max ? periodTotal : max;
     }, 0);
     
-    // Calculate the width of the bar as a percentage of the maximum spending
-    const barWidth = maxSpending > 0 ? (totalSpending / maxSpending) * 100 : 0;
+    // Calculate the width of the bars as a percentage of the maximum spending
+    const recurringWidth = maxSpending > 0 ? (data.recurring.total / maxSpending) * 100 : 0;
+    const oneTimeWidth = maxSpending > 0 ? (data['one-time'].total / maxSpending) * 100 : 0;
     
-    // Calculate proportions for recurring and one-time spending
-    const recurringWidth = totalSpending > 0 ? (data.recurring.total / totalSpending) * barWidth : 0;
-    const oneTimeWidth = totalSpending > 0 ? (data['one-time'].total / totalSpending) * barWidth : 0;
+    // Calculate averages based on view mode
+    const averages = calculateAverages();
+    const avgRecurring = averages.recurring;
+    const avgOneTime = averages.oneTime;
+    
+    // Calculate average indicators as percentage of max spending
+    const avgRecurringPercent = maxSpending > 0 ? (avgRecurring / maxSpending) * 100 : 0;
+    const avgOneTimePercent = maxSpending > 0 ? (avgOneTime / maxSpending) * 100 : 0;
     
     // Check if this period is the currently selected one
     const isSelected = period === selectedPeriod;
@@ -140,40 +146,68 @@ const FinancialCalendar = () => {
           <span className="total-amount">{formatCurrency(totalSpending)}</span>
         </div>
         
-        <div className="spending-bar-container">
-          <div 
-            className="spending-bar"
-            style={{ width: `${barWidth}%` }}
-            title={`Total: ${formatCurrency(totalSpending)}`}
-          >
-            <div 
-              className="recurring-portion"
-              style={{ width: `${recurringWidth / barWidth * 100}%` }}
-              title={`Recurring: ${formatCurrency(data.recurring.total)}`}
-            />
-            <div 
-              className="one-time-portion"
-              style={{ 
-                width: `${oneTimeWidth / barWidth * 100}%`,
-                left: `${recurringWidth / barWidth * 100}%`
-              }}
-              title={`One-time: ${formatCurrency(data['one-time'].total)}`}
-            />
+        <div className="spending-bars-container">
+          <div className="bar-container-with-label">
+            <div className="bar-header">
+              <div className="bar-label recurring">Recurring</div>
+              <div className="bar-amount">{formatCurrency(data.recurring.total)}</div>
+            </div>
+            <div className="bar-container">
+              <div 
+                className="spending-bar recurring-bar"
+                style={{ width: `${recurringWidth}%` }}
+                title={`Recurring: ${formatCurrency(data.recurring.total)}`}
+              ></div>
+              <div 
+                className="avg-indicator recurring-avg"
+                style={{ left: `${avgRecurringPercent}%` }}
+                title={`Average Recurring: ${formatCurrency(avgRecurring)}`}
+              ></div>
+            </div>
           </div>
-        </div>
-        
-        <div className="amount-breakdown">
-          <div className="recurring-amount">
-            <div className="legend-color recurring"></div>
-            <span>{formatCurrency(data.recurring.total)}</span>
-          </div>
-          <div className="one-time-amount">
-            <div className="legend-color one-time"></div>
-            <span>{formatCurrency(data['one-time'].total)}</span>
+          
+          <div className="bar-container-with-label">
+            <div className="bar-header">
+              <div className="bar-label one-time">One-time</div>
+              <div className="bar-amount">{formatCurrency(data['one-time'].total)}</div>
+            </div>
+            <div className="bar-container">
+              <div 
+                className="spending-bar one-time-bar"
+                style={{ width: `${oneTimeWidth}%` }}
+                title={`One-time: ${formatCurrency(data['one-time'].total)}`}
+              ></div>
+              <div 
+                className="avg-indicator one-time-avg"
+                style={{ left: `${avgOneTimePercent}%` }}
+                title={`Average One-time: ${formatCurrency(avgOneTime)}`}
+              ></div>
+            </div>
           </div>
         </div>
       </div>
     );
+  };
+
+  const calculateAverages = () => {
+    if (Object.keys(timelineData).length === 0) {
+      return { recurring: 0, oneTime: 0 };
+    }
+    
+    let recurringTotal = 0;
+    let oneTimeTotal = 0;
+    let count = 0;
+    
+    Object.values(timelineData).forEach(data => {
+      recurringTotal += data.recurring.total;
+      oneTimeTotal += data['one-time'].total;
+      count++;
+    });
+    
+    return {
+      recurring: count > 0 ? recurringTotal / count : 0,
+      oneTime: count > 0 ? oneTimeTotal / count : 0
+    };
   };
 
   const isCurrentPeriod = (period) => {

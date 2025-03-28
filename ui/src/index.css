@@ -756,7 +756,7 @@ td.currency-value {
 
 .one-time-bar {
   height: 100%;
-  background: var(--accent);
+  background: var(--ghibli-green);
   transition: width 0.3s ease;
 }
 
