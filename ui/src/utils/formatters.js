@@ -42,7 +42,7 @@ export const titleCase = (text) => {
   
   // Apply special cases
   Object.entries(specialCases).forEach(([search, replace]) => {
-    titled = titled.replace(new RegExp(search, 'g'), replace);
+    titled = titled.replace(new RegExp(`\\b${search}\\b`, 'g'), replace);
   });
   
   return titled;
