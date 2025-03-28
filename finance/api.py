@@ -276,27 +276,101 @@ def get_subscriptions():
         raise HTTPException(status_code=500, detail=f"Failed to analyze subscriptions: {str(e)}")
 
 @app.get("/transactions/timeline")
-def get_transaction_timeline():
-    """Get transactions for timeline view."""
+def get_transaction_timeline(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    view_mode: str = Query("monthly", description="View mode: yearly, monthly, daily, or hourly")
+):
+    """Get transaction timeline data for financial calendar."""
     try:
+        # Base query to get all transactions in the date range
         query = """
         SELECT 
             id,
             date,
             amount,
             merchant_name,
-            transaction_type,
-            original_description
+            transaction_type
         FROM 
             transactions
         WHERE 
-            date >= date('now', '-3 months')
+            date BETWEEN ? AND ?
         ORDER BY 
-            date DESC
+            date
         """
         
-        df = db.run_query_pandas(query)
-        return df.to_dict(orient="records")
+        df = db.run_query_pandas(query, (start_date, end_date))
+        
+        if df.empty:
+            return {}
+            
+        # Convert amounts to float and ensure negative values for expenses
+        df['amount'] = df['amount'].apply(lambda x: float(str(x).replace('+', '').replace('-', '-')))
+        
+        # Group by period based on view_mode
+        if view_mode == 'yearly':
+            period_format = '%Y'
+        elif view_mode == 'monthly':
+            period_format = '%Y-%m'
+        elif view_mode == 'daily':
+            period_format = '%Y-%m-%d'
+        else:  # hourly - we'll use daily for now since we don't have hour data
+            period_format = '%Y-%m-%d'
+            
+        # Add period column
+        df['period'] = df['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').strftime(period_format))
+        
+        # Identify recurring transactions (simplified approach)
+        # Group by merchant and amount, count occurrences
+        merchant_counts = df.groupby(['merchant_name', 'amount']).size().reset_index(name='count')
+        recurring_merchants = set(merchant_counts[merchant_counts['count'] > 1]['merchant_name'])
+        
+        # Mark transactions as recurring or one-time
+        df['is_recurring'] = df['merchant_name'].apply(lambda x: x in recurring_merchants)
+        
+        # Group by period and transaction type (recurring vs one-time)
+        result = {}
+        for period in df['period'].unique():
+            period_df = df[df['period'] == period]
+            
+            recurring_df = period_df[period_df['is_recurring']]
+            onetime_df = period_df[~period_df['is_recurring']]
+            
+            # Calculate totals (use absolute values for display)
+            recurring_total = abs(recurring_df['amount'].sum()) if not recurring_df.empty else 0
+            onetime_total = abs(onetime_df['amount'].sum()) if not onetime_df.empty else 0
+            
+            # Get top transactions for each category
+            recurring_transactions = []
+            for _, row in recurring_df.iterrows():
+                recurring_transactions.append({
+                    'merchant': row['merchant_name'],
+                    'amount': abs(float(row['amount'])),
+                    'type': row['transaction_type'],
+                    'count': int(merchant_counts[(merchant_counts['merchant_name'] == row['merchant_name']) & 
+                                              (merchant_counts['amount'] == row['amount'])]['count'].values[0])
+                })
+            
+            onetime_transactions = []
+            for _, row in onetime_df.iterrows():
+                onetime_transactions.append({
+                    'merchant': row['merchant_name'],
+                    'amount': abs(float(row['amount'])),
+                    'type': row['transaction_type']
+                })
+            
+            result[period] = {
+                'recurring': {
+                    'total': recurring_total,
+                    'transactions': sorted(recurring_transactions, key=lambda x: x['amount'], reverse=True)
+                },
+                'one-time': {
+                    'total': onetime_total,
+                    'transactions': sorted(onetime_transactions, key=lambda x: x['amount'], reverse=True)
+                }
+            }
+            
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch transaction timeline: {str(e)}")
 
