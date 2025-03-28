@@ -237,23 +237,53 @@ td.currency-value {
   margin: 0;
 }
 
+/* Redesigned navigation buttons */
 .nav-button {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 1.2rem;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border: none;
+  border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  color: var(--primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .nav-button:hover {
-  background-color: var(--accent);
+  background-color: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(125, 107, 145, 0.3);
+}
+
+.nav-icon {
+  font-size: 0.9rem;
+}
+
+.current-period {
+  text-align: center;
+}
+
+.current-period h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.period-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--ghibli-cream);
+  border-radius: 12px;
 }
 
 .calendar-grid {
@@ -1399,114 +1429,78 @@ td.currency-value {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   background: white;
   border-radius: 8px;
   box-shadow: var(--card-shadow);
   min-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.category-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .category-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .category-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: white;
 }
 
 .category-name {
   font-weight: 500;
+  font-size: 0.95rem;
 }
 
-.category-count {
-  font-size: 0.8rem;
-  color: var(--text-light);
-}
-
-.merchants-table {
-  margin-top: 1.5rem;
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: var(--card-shadow);
-}
-
-.merchants-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.merchants-table th {
-  text-align: left;
-  padding: 0.75rem;
-  border-bottom: 1px solid rgba(125, 107, 145, 0.2);
-  color: var(--text-light);
-  font-weight: 500;
-}
-
-.merchants-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid rgba(125, 107, 145, 0.1);
-}
-
-.merchants-table tr:last-child td {
-  border-bottom: none;
-}
-
-.category-select-container {
+/* Replaced the btn-danger with a more subtle delete button */
+.btn-icon.delete {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: var(--text-light);
+  transition: all 0.2s;
 }
 
-.category-select {
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  min-width: 150px;
+.btn-icon.delete:hover {
+  color: #e53e3e;
+  background-color: rgba(229, 62, 62, 0.1);
 }
 
+/* Update tag styling for consistency across all views */
 .category-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
   font-size: 0.8rem;
+  font-weight: 500;
   white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease;
 }
 
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
-}
-
-.pagination-info {
-  display: inline-block;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-light);
-}
-
-@media (max-width: 768px) {
-  .merchants-table {
-    overflow-x: auto;
-  }
-  
-  .category-select-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
+.category-tag:hover {
+  transform: translateY(-1px);
 }
 
 /* Filter controls */
@@ -1616,4 +1610,89 @@ h2::before {
   0% { width: 60px; opacity: 0.5; }
   50% { width: 120px; opacity: 0.8; }
   100% { width: 60px; opacity: 0.5; }
+}
+
+/* Styled Category Tag-like Dropdown */
+.merchants-table {
+  margin-top: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--card-shadow);
+}
+
+.merchants-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.merchants-table th {
+  text-align: left;
+  padding: 0.75rem;
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
+}
+
+.merchants-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(125, 107, 145, 0.1);
+}
+
+.merchants-table tr:last-child td {
+  border-bottom: none;
+}
+
+.category-select-container {
+  position: relative;
+  display: inline-block;
+}
+
+.category-select-tag {
+  appearance: none;
+  padding: 0.3rem 2.5rem 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(125, 107, 145, 0.2);
+  background-color: white;
+  font-weight: 500;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+  min-width: 150px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.category-select-tag:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(125, 107, 145, 0.4);
+}
+
+.category-select-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.category-select-tag.no-category {
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.category-select-tag.has-category {
+  color: white;
+}
+
+.category-select-tag option {
+  background-color: white;
+  color: var(--text);
+  font-weight: normal;
+}
+
+@media (max-width: 768px) {
+  .merchants-table {
+    overflow-x: auto;
+  }
 } 

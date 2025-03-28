@@ -344,13 +344,13 @@ const MerchantCategoryManager = () => {
                   {category.icon}
                 </span>
                 <span className="category-name">{category.name}</span>
-                <span className="category-count">({category.merchant_count || 0} merchants)</span>
               </div>
               <button 
-                className="btn btn-danger btn-sm"
+                className="btn-icon delete"
                 onClick={() => handleDeleteCategory(category.id)}
+                title="Delete category"
               >
-                Delete
+                ×
               </button>
             </div>
           ))}
@@ -420,7 +420,11 @@ const MerchantCategoryManager = () => {
                       <select
                         value={categoryId || "none"}
                         onChange={(e) => handleCategoryChange(merchant.merchant_name, e.target.value)}
-                        className="category-select"
+                        className={`category-select-tag ${categoryId ? 'has-category' : 'no-category'}`}
+                        style={category ? {
+                          backgroundColor: category.color,
+                          color: '#fff'
+                        } : {}}
                       >
                         <option value="none">None</option>
                         {categories.map(cat => (
@@ -429,15 +433,6 @@ const MerchantCategoryManager = () => {
                           </option>
                         ))}
                       </select>
-                      
-                      {category && (
-                        <span 
-                          className="category-tag" 
-                          style={{backgroundColor: category.color, color: '#fff'}}
-                        >
-                          {category.icon} {category.name}
-                        </span>
-                      )}
                     </div>
                   </td>
                 </tr>

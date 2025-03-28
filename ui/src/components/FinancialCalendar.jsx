@@ -186,30 +186,49 @@ const FinancialCalendar = () => {
       return <div className="no-data">No category data</div>;
     }
 
+    // Calculate the total amount for proper proportions
     const totalAmount = Object.values(combinedCategories).reduce((sum, cat) => sum + cat.total, 0);
+    
+    // Sort categories by amount (descending) for consistent display
+    const sortedCategories = Object.entries(combinedCategories).sort((a, b) => b[1].total - a[1].total);
     
     return (
       <div className="category-bars">
-        {Object.entries(combinedCategories).map(([name, data]) => (
-          <div key={name} className="category-bar-container">
-            <div className="category-bar-label">
-              <span className="category-icon" style={{ backgroundColor: data.color || '#CCCCCC' }}>
-                {data.icon || '📊'}
-              </span>
-              <span>{name}</span>
-              <span className="category-amount">{formatCurrency(data.total)}</span>
+        {sortedCategories.map(([name, data]) => {
+          // Calculate percentage width
+          const percentWidth = totalAmount > 0 ? (data.total / totalAmount) * 100 : 0;
+          
+          return (
+            <div key={name} className="category-bar-container">
+              <div className="category-bar-label">
+                <span className="category-icon" style={{ backgroundColor: data.color || '#CCCCCC' }}>
+                  {data.icon || '📊'}
+                </span>
+                <span>{name}</span>
+                <span className="category-amount">{formatCurrency(data.total)}</span>
+              </div>
+              <div className="category-bar-wrapper">
+                <div 
+                  className="category-bar" 
+                  style={{ 
+                    width: `${percentWidth}%`,
+                    backgroundColor: data.color || '#CCCCCC'
+                  }}
+                />
+                {data.average && (
+                  <div 
+                    className="average-indicator" 
+                    style={{ 
+                      left: `${Math.min((data.average / totalAmount) * 100, 98)}%`,
+                      backgroundColor: data.color || '#CCCCCC'
+                    }}
+                    title={`Average: ${formatCurrency(data.average)}`}
+                  />
+                )}
+              </div>
             </div>
-            <div className="category-bar-wrapper">
-              <div 
-                className="category-bar" 
-                style={{ 
-                  width: `${(data.total / totalAmount) * 100}%`,
-                  backgroundColor: data.color || '#CCCCCC'
-                }}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -404,6 +423,55 @@ const FinancialCalendar = () => {
     return null;
   };
 
+  // Fix the calculation functions inside the component
+  const calculateCategoryAverage = (categoryName, viewMode, currentPeriod) => {
+    // Skip calculation if we don't have enough data
+    if (!timelineData || Object.keys(timelineData).length <= 1) {
+      return null;
+    }
+    
+    let totalSpend = 0;
+    let periodCount = 0;
+    
+    // Collect data from all periods except the current one
+    Object.entries(timelineData).forEach(([period, data]) => {
+      // Skip the current period for the average calculation
+      if (period !== currentPeriod && data.categories && data.categories[categoryName]) {
+        totalSpend += Math.abs(data.categories[categoryName].amount || 0);
+        periodCount++;
+      }
+    });
+    
+    // Return the average if we have data, otherwise null
+    return periodCount > 0 ? totalSpend / periodCount : null;
+  };
+  
+  const calculateUncategorizedAverage = (viewMode, currentPeriod) => {
+    if (!timelineData || Object.keys(timelineData).length <= 1) {
+      return null;
+    }
+    
+    let totalUncategorized = 0;
+    let periodCount = 0;
+    
+    Object.entries(timelineData).forEach(([period, data]) => {
+      if (period !== currentPeriod) {
+        const totalAmount = Math.abs(data.total || 0);
+        const categorizedTotal = Object.values(data.categories || {}).reduce(
+          (sum, cat) => sum + Math.abs(cat.amount || 0), 0
+        );
+        
+        const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
+        if (uncategorizedAmount > 0) {
+          totalUncategorized += uncategorizedAmount;
+          periodCount++;
+        }
+      }
+    });
+    
+    return periodCount > 0 ? totalUncategorized / periodCount : null;
+  };
+
   if (loading) {
     return <div className="loading">Loading financial calendar...</div>;
   }
@@ -414,6 +482,38 @@ const FinancialCalendar = () => {
 
   const periods = Object.keys(timelineData).sort();
   const selectedData = selectedPeriod ? timelineData[selectedPeriod] : null;
+
+  const calculateGlobalMaxAmount = () => {
+    if (!periods.length) return 1;
+    
+    return Math.max(
+      ...periods.flatMap(period => {
+        const data = timelineData[period];
+        const allCats = data.categories || {};
+        
+        // Get amounts from all categories
+        const amounts = Object.values(allCats).map(cat => Math.abs(cat.amount || 0));
+        
+        // Calculate uncategorized amount
+        const totalAmount = Math.abs(data.total || 0);
+        const categorizedTotal = Object.values(allCats).reduce(
+          (sum, cat) => sum + Math.abs(cat.amount || 0), 0
+        );
+        const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
+        
+        // Add uncategorized to our list of amounts
+        if (uncategorizedAmount > 0) {
+          amounts.push(uncategorizedAmount);
+        }
+        
+        return amounts;
+      }),
+      1 // Ensure we don't divide by zero
+    );
+  };
+
+  // Call this function once to get our global max
+  const globalMaxAmount = calculateGlobalMaxAmount();
 
   return (
     <div className="financial-calendar">
@@ -508,90 +608,138 @@ const FinancialCalendar = () => {
       ) : (
         periods.length > 0 ? (
           <div className="calendar-grid">
-            {periods.map(period => {
-              const data = timelineData[period];
+            {(() => {
+              // Calculate global maximum amount once for consistent scaling
+              const globalMaxAmount = Math.max(
+                ...periods.flatMap(period => {
+                  const data = timelineData[period];
+                  const allCats = data.categories || {};
+                  // Get amounts from all categories including uncategorized
+                  const amounts = Object.values(allCats).map(cat => Math.abs(cat.amount || 0));
+                  
+                  // Calculate uncategorized amount
+                  const totalAmount = Math.abs(data.total || 0);
+                  const categorizedTotal = Object.values(allCats).reduce((sum, cat) => sum + Math.abs(cat.amount || 0), 0);
+                  const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
+                  
+                  // Add uncategorized to our list of amounts
+                  if (uncategorizedAmount > 0) {
+                    amounts.push(uncategorizedAmount);
+                  }
+                  
+                  return amounts;
+                }),
+                1 // Ensure we don't divide by zero
+              );
               
-              // Combine all transactions regardless of recurring status
-              const allTransactions = [...(data.transactions || [])];
-              const totalAmount = Math.abs(data.total || 0);
-              
-              // Process all categories together
-              const allCategories = {};
-              
-              // First, add existing categories
-              Object.entries(data.categories || {}).forEach(([name, categoryData]) => {
-                if (!allCategories[name]) {
-                  allCategories[name] = { ...categoryData, total: Math.abs(categoryData.amount || 0) };
+              // Now we can map periods with our global max value
+              return periods.map(period => {
+                const data = timelineData[period];
+                
+                // Combine all transactions regardless of recurring status
+                const allTransactions = [...(data.transactions || [])];
+                const totalAmount = Math.abs(data.total || 0);
+                
+                // Process all categories together
+                const allCategories = {};
+                
+                // First, add existing categories
+                Object.entries(data.categories || {}).forEach(([name, categoryData]) => {
+                  if (!allCategories[name]) {
+                    allCategories[name] = { 
+                      ...categoryData, 
+                      total: Math.abs(categoryData.amount || 0),
+                      // Calculate average based on view mode
+                      average: calculateCategoryAverage(name, viewMode, period)
+                    };
+                  }
+                });
+                
+                // Calculate total amount in categorized transactions
+                const categorizedTotal = Object.values(allCategories).reduce((sum, cat) => sum + cat.total, 0);
+                
+                // If there's a difference between total amount and categorized total, add an Uncategorized category
+                const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
+                if (uncategorizedAmount > 0) {
+                  allCategories['Uncategorized'] = {
+                    total: uncategorizedAmount,
+                    count: allTransactions.length - Object.values(allCategories).reduce((sum, cat) => sum + (cat.count || 0), 0),
+                    color: '#CCCCCC',
+                    icon: '❓',
+                    // Calculate average for uncategorized as well
+                    average: calculateUncategorizedAverage(viewMode, period)
+                  };
                 }
-              });
-              
-              // Calculate total amount in categorized transactions
-              const categorizedTotal = Object.values(allCategories).reduce((sum, cat) => sum + cat.total, 0);
-              
-              // If there's a difference between total amount and categorized total, add an Uncategorized category
-              const uncategorizedAmount = totalAmount - categorizedTotal;
-              if (uncategorizedAmount > 0) {
-                allCategories['Uncategorized'] = {
-                  total: uncategorizedAmount,
-                  count: allTransactions.length - Object.values(allCategories).reduce((sum, cat) => sum + (cat.count || 0), 0),
-                  color: '#CCCCCC',
-                  icon: '❓'
-                };
-              }
-              
-              const isToday = viewMode === 'daily' && period === new Date().toISOString().split('T')[0];
-              
-              return (
-                <div 
-                  key={period} 
-                  className={`time-block ${selectedPeriod === period ? 'selected' : ''} ${isToday ? 'today' : ''}`}
-                  onClick={() => handlePeriodSelect(period)}
-                  onDoubleClick={() => handleDrillDown(period)}
-                >
-                  <div className="time-block-header">
-                    <div className="period-label">{formatPeriodLabel(period)}</div>
-                  </div>
-                  
-                  <div className="amount-display">
-                    <div className="total-amount">{formatCurrency(totalAmount)}</div>
-                  </div>
-                  
-                  <div className="spending-bars-container">
-                    {Object.entries(allCategories).length > 0 ? (
-                      Object.entries(allCategories).map(([name, categoryData]) => (
-                        <div key={name} className="bar-container-with-label">
-                          <div className="bar-header">
-                            <span className="bar-label" style={{ color: categoryData.color || '#CCCCCC' }}>
-                              {categoryData.icon || '📊'} {name}
-                            </span>
-                            <span className="bar-amount" style={{ color: categoryData.color || '#CCCCCC' }}>
-                              {formatCurrency(categoryData.total)}
-                            </span>
-                          </div>
-                          <div className="bar-container">
-                            <div 
-                              className="spending-bar" 
-                              style={{ 
-                                width: `${(categoryData.total / totalAmount) * 100}%`,
-                                backgroundColor: categoryData.color || '#CCCCCC'
-                              }} 
-                            />
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="no-data">No category data</div>
+                
+                const isToday = viewMode === 'daily' && period === new Date().toISOString().split('T')[0];
+                
+                return (
+                  <div 
+                    key={period} 
+                    className={`time-block ${selectedPeriod === period ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+                    onClick={() => handlePeriodSelect(period)}
+                    onDoubleClick={() => handleDrillDown(period)}
+                  >
+                    <div className="time-block-header">
+                      <div className="period-label">{formatPeriodLabel(period)}</div>
+                    </div>
+                    
+                    <div className="amount-display">
+                      <div className="total-amount">{formatCurrency(totalAmount)}</div>
+                    </div>
+                    
+                    <div className="spending-bars-container">
+                      {Object.entries(allCategories).length > 0 ? (
+                        Object.entries(allCategories).map(([name, categoryData]) => {
+                          // Use our global max for consistent scaling
+                          const percentWidth = Math.min((categoryData.total / globalMaxAmount) * 100, 100);
+                          
+                          return (
+                            <div key={name} className="bar-container-with-label">
+                              <div className="bar-header">
+                                <span className="bar-label" style={{ color: categoryData.color || '#CCCCCC' }}>
+                                  {categoryData.icon || '📊'} {name}
+                                </span>
+                                <span className="bar-amount" style={{ color: categoryData.color || '#CCCCCC' }}>
+                                  {formatCurrency(categoryData.total)}
+                                </span>
+                              </div>
+                              <div className="bar-container">
+                                <div 
+                                  className="spending-bar" 
+                                  style={{ 
+                                    width: `${percentWidth}%`,
+                                    backgroundColor: categoryData.color || '#CCCCCC'
+                                  }} 
+                                />
+                                {categoryData.average && (
+                                  <div 
+                                    className="avg-indicator"
+                                    style={{ 
+                                      left: `${Math.min((categoryData.average / globalMaxAmount) * 100, 98)}%`,
+                                      backgroundColor: categoryData.color || '#CCCCCC'
+                                    }}
+                                    title={`Average: ${formatCurrency(categoryData.average)}`}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="no-data">No category data</div>
+                      )}
+                    </div>
+                    
+                    {viewMode !== 'daily' && (
+                      <div className="drill-down-hint">
+                        Double-click to see details
+                      </div>
                     )}
                   </div>
-                  
-                  {viewMode !== 'daily' && (
-                    <div className="drill-down-hint">
-                      Double-click to see details
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         ) : (
           <div className="no-data-message">

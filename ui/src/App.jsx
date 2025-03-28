@@ -11,7 +11,7 @@ function App() {
   return (
     <div className="container ghibli-theme">
       <h1 className="app-title">
-        Finance Dashboard
+        abcdefghijklmnopqrstuvwxyz
       </h1>
       
       <div className="tab-navigation">
