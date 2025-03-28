@@ -10,16 +10,12 @@ function App() {
 
   return (
     <div className="container welcoming-theme">
-      <h1 className="app-title">
-        abcdefghijklmnopqrstuvwxyz
-      </h1>
-      
       <div className="tab-navigation">
         <button 
           className={`tab-button ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
         >
-          Financial Calendar
+          Calendar
         </button>
         <button 
           className={`tab-button ${activeTab === 'subscriptions' ? 'active' : ''}`}

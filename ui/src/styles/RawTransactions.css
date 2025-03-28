@@ -2,7 +2,8 @@
   background-color: var(--welcoming-cream);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: var(--card-shadow);
+  box-shadow: none;
+  border-top: none;
 }
 
 .transactions-header {
