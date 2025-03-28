@@ -6,162 +6,152 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Calendar Toolbar */
-.calendar-toolbar {
+/* Add a subtle decorative element */
+.financial-calendar::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(148, 180, 159, 0.2) 0%, rgba(148, 180, 159, 0) 70%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.calendar-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(125, 107, 145, 0.2);
+  margin-bottom: 2rem;
 }
 
-.toolbar-left, .toolbar-right {
+.calendar-header h2 {
+  position: relative;
+  color: var(--primary);
+  font-size: 1.8rem;
+  margin: 0;
+  padding-bottom: 0.5rem;
+}
+
+.calendar-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.view-controls {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.today-button {
-  padding: 0.5rem 1.25rem;
-  background-color: var(--ghibli-green);
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 500;
-  color: white;
-  transition: all 0.2s ease;
-}
-
-.today-button:hover {
-  background-color: #86a591;
-  transform: translateY(-2px);
-}
-
-.navigation-buttons {
+.zoom-controls {
   display: flex;
   gap: 0.5rem;
 }
 
-.nav-button {
+.zoom-controls button {
+  padding: 0.5rem 1rem;
+  border: none;
   background: white;
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.nav-button:hover {
-  background-color: var(--ghibli-cream);
-  transform: translateY(-2px);
-}
-
-.period-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.back-button {
-  padding: 0.5rem 1.25rem;
-  background-color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background-color: var(--ghibli-cream);
-  transform: translateY(-2px);
-}
-
-.view-selector {
-  display: flex;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.view-selector button {
-  padding: 0.5rem 1.25rem;
-  background-color: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
   color: var(--text-light);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.view-selector button.active {
-  background-color: var(--primary);
+.zoom-controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.zoom-controls button.active {
+  background: var(--primary);
   color: white;
+  box-shadow: 0 2px 8px rgba(125, 107, 145, 0.3);
 }
 
-/* Calendar Container */
-.calendar-container {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.calendar-header-row {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-weight: 500;
+.date-range-controls button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: white;
   color: var(--text-light);
-  margin-bottom: 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.header-cell {
-  padding: 0.5rem;
+.date-range-controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  color: var(--primary);
 }
 
 .calendar-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
-  flex-grow: 1;
-  overflow-y: auto;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
-/* Time Blocks */
 .time-block {
   border: none;
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1.25rem;
   background-color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
-  height: 220px;
-  display: flex;
-  flex-direction: column;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: relative;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.time-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .time-block:hover {
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
   transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.time-block:hover::before {
+  opacity: 1;
 }
 
 .time-block.selected {
-  border: 2px solid var(--primary);
-  box-shadow: 0 0 0 4px rgba(125, 107, 145, 0.2);
+  border: none;
+  box-shadow: 0 0 0 2px var(--primary), 0 6px 16px rgba(0, 0, 0, 0.12);
+  background: rgba(242, 233, 228, 0.5);
+}
+
+.time-block.selected::before {
+  opacity: 1;
+  background: var(--primary);
 }
 
 .time-block.today {
@@ -591,4 +581,497 @@
 
 .bar-container-with-label:last-child .bar-amount {
   color: var(--ghibli-green);
+}
+
+/* Add these styles to the existing FinancialCalendar.css */
+
+.category-bars {
+  margin: 1rem 0;
+}
+
+.category-bar-container {
+  margin-bottom: 0.75rem;
+}
+
+.category-bar-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.category-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  font-size: 0.7rem;
+  color: white;
+}
+
+.category-amount {
+  margin-left: auto;
+  font-weight: 500;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.category-bar-wrapper {
+  height: 8px;
+  background-color: #f1f1f1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.category-bar {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+}
+
+.spending-breakdown {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.spending-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.spending-label {
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.spending-value {
+  font-weight: 500;
+}
+
+.date-range-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.date-range-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary);
+  background: white;
+  color: var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-range-controls button:hover {
+  background: rgba(125, 107, 145, 0.1);
+}
+
+/* Add these Ghibli-inspired styles */
+.period-detail {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  margin-top: 2rem;
+  border-top: none;
+}
+
+.period-detail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--ghibli-green), var(--primary));
+}
+
+.period-detail h3 {
+  color: var(--primary);
+  font-size: 1.5rem;
+  margin-top: 0;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.5rem;
+}
+
+.period-detail h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.spending-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  background-color: var(--ghibli-cream);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.summary-section h4 {
+  color: var(--primary);
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.summary-section .amount {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+}
+
+.summary-section h5 {
+  color: var(--text-light);
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.summary-section h5::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.transaction-list {
+  background-color: white;
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.transaction-item {
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+  background-color: rgba(242, 233, 228, 0.3);
+}
+
+.transaction-item:hover {
+  background-color: rgba(242, 233, 228, 0.6);
+}
+
+.transaction-item:last-child {
+  margin-bottom: 0;
+}
+
+.category-tag {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+  font-style: italic;
+  background-color: rgba(242, 233, 228, 0.5);
+  border-radius: 8px;
+  position: relative;
+}
+
+.no-data::before {
+  content: '🍃';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.2rem;
+  opacity: 0.5;
+}
+
+/* Add these styles to your existing FinancialCalendar.css */
+
+.drill-down-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.time-block:hover .drill-down-hint {
+  opacity: 0.8;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  background-color: rgba(125, 107, 145, 0.1);
+}
+
+.back-icon {
+  font-size: 1.1rem;
+}
+
+/* Animation for drill-down transition */
+.calendar-grid {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.date-range-info {
+  margin-bottom: 1rem;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.no-data-message {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin: 2rem 0;
+  color: var(--text);
+}
+
+.no-data-message p:first-child {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.no-data-message p:last-child {
+  color: var(--text-light);
+}
+
+.period-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--ghibli-cream);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.nav-button:hover {
+  background-color: rgba(125, 107, 145, 0.1);
+  transform: translateY(-2px);
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+}
+
+.current-period {
+  text-align: center;
+}
+
+.current-period h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* Hourly view styles */
+.hourly-view {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.hourly-view h3 {
+  color: var(--primary);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.5rem;
+}
+
+.hourly-view h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.hour-group {
+  margin-bottom: 1.5rem;
+}
+
+.hour-header {
+  background-color: var(--ghibli-cream);
+  padding: 0.5rem 1rem;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0.5rem;
+}
+
+.hour-label {
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.transactions-list {
+  background-color: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.transaction-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 1.5fr 200px 120px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.transaction-row:hover {
+  background-color: rgba(242, 233, 228, 0.3);
+}
+
+.transaction-time {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.transaction-merchant {
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.transaction-category {
+  text-align: right;
+}
+
+.transaction-amount {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 600;
+  text-align: right;
+}
+
+.uncategorized {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.transaction-description {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding-right: 1rem;
+}
+
+/* Update responsive styles */
+@media (max-width: 768px) {
+  .transaction-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+  
+  .transaction-time {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .transaction-merchant {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  
+  .transaction-description {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+  }
+  
+  .transaction-category {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  
+  .transaction-amount {
+    grid-column: 2;
+    grid-row: 3;
+    text-align: right;
+  }
 } 

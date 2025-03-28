@@ -69,4 +69,105 @@ export const fetchTransactionTimeline = async ({ start_date, end_date, view_mode
     console.error('Error fetching transaction timeline:', error);
     throw error;
   }
+};
+
+export const fetchAllMerchants = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/merchants/all`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all merchants:', error);
+    throw error;
+  }
+};
+
+export const fetchCategories = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/categories`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    throw error;
+  }
+};
+
+export const createCategory = async (categoryData) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/categories`, categoryData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating category:', error);
+    throw error;
+  }
+};
+
+export const fetchMerchantCategories = async (merchantName) => {
+  try {
+    // Double encode the merchant name to handle special characters
+    const encodedMerchantName = encodeURIComponent(merchantName);
+    const response = await axios.get(`${API_BASE_URL}/merchants/${encodedMerchantName}/categories`);
+    return response.data;
+  } catch (error) {
+    // Return empty array instead of throwing error for merchants with no categories
+    if (error.response && error.response.status === 404) {
+      console.log(`No categories found for merchant: ${merchantName}`);
+      return [];
+    }
+    console.error(`Error fetching categories for merchant ${merchantName}:`, error);
+    return [];  // Return empty array to avoid breaking the UI
+  }
+};
+
+export const addMerchantCategory = async (merchantName, categoryId) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/merchants/${encodeURIComponent(merchantName)}/categories/${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error adding category to merchant ${merchantName}:`, error);
+    throw error;
+  }
+};
+
+export const removeMerchantCategory = async (merchantName, categoryId) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/merchants/${encodeURIComponent(merchantName)}/categories/${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error removing category from merchant ${merchantName}:`, error);
+    throw error;
+  }
+};
+
+export const fetchTransactionTimelineWithCategories = async (startDate, endDate, viewMode = 'monthly') => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/transactions/timeline/categories`, {
+      params: { start_date: startDate, end_date: endDate, view_mode: viewMode }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching transaction timeline with categories:', error);
+    throw error;
+  }
+};
+
+export const deleteCategory = async (categoryId) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/categories/${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting category ${categoryId}:`, error);
+    throw error;
+  }
+};
+
+export const fetchRawTransactions = async (limit = 1000, offset = 0) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/transactions/raw`, {
+      params: { limit, offset }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching raw transactions:', error);
+    throw error;
+  }
 }; 
