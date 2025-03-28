@@ -1,5 +1,5 @@
 .raw-transactions {
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: var(--card-shadow);
@@ -89,11 +89,11 @@
 }
 
 .amount.negative {
-  color: var(--ghibli-red);
+  color: var(--welcoming-red);
 }
 
 .amount.positive {
-  color: var(--ghibli-green);
+  color: var(--welcoming-green);
 }
 
 .description {
@@ -214,7 +214,7 @@
 }
 
 .clear-filters-button {
-  background-color: var(--ghibli-red);
+  background-color: var(--welcoming-red);
   color: white;
   border: none;
   border-radius: 8px;

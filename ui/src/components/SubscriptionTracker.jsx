@@ -197,7 +197,7 @@ const SubscriptionTracker = () => {
     return (
       <div className="subscription-list" style={{
         padding: '1.5rem',
-        backgroundColor: 'var(--ghibli-cream)',
+        backgroundColor: 'var(--welcoming-cream)',
         borderRadius: '12px'
       }}>
         <div className="subscription-header-controls" style={{
@@ -392,7 +392,7 @@ const SubscriptionTracker = () => {
       textAlign: 'center',
       padding: '3rem',
       color: 'var(--text-light)',
-      backgroundColor: 'var(--ghibli-cream)',
+      backgroundColor: 'var(--welcoming-cream)',
       borderRadius: '12px'
     }}>
       Loading subscription data...

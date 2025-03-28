@@ -1,5 +1,5 @@
 :root {
-  /* Ghibli-inspired color palette */
+  /* welcoming-inspired color palette */
   --primary: #7D6B91;      /* Soft lavender purple */
   --secondary: #A5C9CA;    /* Muted teal */
   --accent: #E76F51;       /* Warm terracotta */
@@ -9,11 +9,11 @@
   --card-shadow: 0 8px 24px rgba(125, 107, 145, 0.15), 0 2px 4px rgba(125, 107, 145, 0.1);
   --card-border: 1px solid rgba(125, 107, 145, 0.1);
   
-  /* Additional Ghibli-inspired colors */
-  --ghibli-green: #94B49F;  /* Soft forest green */
-  --ghibli-blue: #98C1D9;   /* Gentle sky blue */
-  --ghibli-cream: #F2E9E4;  /* Warm cream */
-  --ghibli-brown: #9C6644;  /* Earthy brown */
+  /* Additional welcoming-inspired colors */
+  --welcoming-green: #94B49F;  /* Soft forest green */
+  --welcoming-blue: #98C1D9;   /* Gentle sky blue */
+  --welcoming-cream: #F2E9E4;  /* Warm cream */
+  --welcoming-brown: #9C6644;  /* Earthy brown */
 }
 
 body {
@@ -29,11 +29,11 @@ body {
   background-position: center;
 }
 
-.ghibli-theme {
+.welcoming-theme {
   position: relative;
 }
 
-.ghibli-theme::before {
+.welcoming-theme::before {
   content: '';
   position: fixed;
   top: 0;
@@ -138,7 +138,7 @@ body {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--ghibli-green), var(--primary), var(--ghibli-blue));
+  background: linear-gradient(90deg, var(--welcoming-green), var(--primary), var(--welcoming-blue));
   opacity: 0.7;
 }
 
@@ -282,7 +282,7 @@ td.currency-value {
   align-items: center;
   margin-bottom: 1.5rem;
   padding: 0.75rem 1rem;
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
 }
 
@@ -862,7 +862,7 @@ td.currency-value {
 
 .one-time-bar {
   height: 100%;
-  background: var(--ghibli-green);
+  background: var(--welcoming-green);
   transition: width 0.3s ease;
 }
 
@@ -1137,7 +1137,7 @@ td.currency-value {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 500;
-  background: var(--ghibli-cream);
+  background: var(--welcoming-cream);
   color: var(--text);
   margin-right: 0.5rem;
 }
@@ -1544,11 +1544,11 @@ td.currency-value {
   }
 }
 
-/* Add these Ghibli-inspired styles */
+/* Add these welcoming-inspired styles */
 .financial-calendar, 
 .subscription-tracker, 
 .category-management {
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
   padding: 1.5rem;
 }
@@ -1589,7 +1589,7 @@ h2::before {
   text-align: center;
   padding: 3rem;
   color: var(--text-light);
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
   position: relative;
 }

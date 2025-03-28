@@ -9,7 +9,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('calendar');
 
   return (
-    <div className="container ghibli-theme">
+    <div className="container welcoming-theme">
       <h1 className="app-title">
         abcdefghijklmnopqrstuvwxyz
       </h1>

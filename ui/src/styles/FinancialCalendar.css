@@ -1,6 +1,6 @@
 .financial-calendar {
   padding: 1.5rem;
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
   box-shadow: var(--card-shadow);
   display: flex;
@@ -163,7 +163,7 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: var(--ghibli-blue);
+  background-color: var(--welcoming-blue);
   color: white;
   font-size: 0.7rem;
   padding: 0.2rem 0.6rem;
@@ -248,7 +248,7 @@
 }
 
 .one-time-bar {
-  background-color: var(--ghibli-green);
+  background-color: var(--welcoming-green);
 }
 
 .avg-indicator {
@@ -410,7 +410,7 @@
 
 .onetime-spending .value {
   font-weight: 600;
-  color: var(--ghibli-green);
+  color: var(--welcoming-green);
 }
 
 .percentage {
@@ -567,7 +567,7 @@
 }
 
 .bar-header:has(.bar-label.one-time) .bar-amount {
-  color: var(--ghibli-green);
+  color: var(--welcoming-green);
 }
 
 /* Add specific classes for each amount type */
@@ -576,7 +576,7 @@
 }
 
 .bar-container-with-label:last-child .bar-amount {
-  color: var(--ghibli-green);
+  color: var(--welcoming-green);
 }
 
 /* Add these styles to the existing FinancialCalendar.css */
@@ -671,7 +671,7 @@
   background: rgba(125, 107, 145, 0.1);
 }
 
-/* Add these Ghibli-inspired styles */
+/* Add these welcoming-inspired styles */
 .period-detail {
   background-color: white;
   border-radius: 12px;
@@ -690,7 +690,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--ghibli-green), var(--primary));
+  background: linear-gradient(90deg, var(--welcoming-green), var(--primary));
 }
 
 .period-detail h3 {
@@ -716,7 +716,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border-radius: 12px;
   padding: 1.5rem;
   margin-top: 1.5rem;
@@ -905,7 +905,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   border: none;
   border-radius: 20px;
   cursor: pointer;
@@ -968,7 +968,7 @@
 }
 
 .hour-header {
-  background-color: var(--ghibli-cream);
+  background-color: var(--welcoming-cream);
   padding: 0.5rem 1rem;
   border-radius: 8px 8px 0 0;
   margin-bottom: 0.5rem;
