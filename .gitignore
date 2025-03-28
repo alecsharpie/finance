@@ -14,3 +14,6 @@ wheels/
 raw_data/
 finance-prod.db
 finance-stag.db
+
+# Node
+node_modules/

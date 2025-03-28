@@ -105,13 +105,53 @@ class FinanceDB:
             cursor.execute(query)
             return cursor.fetchall()
         
-    def run_query_pandas(self, query: str, params=None):
-        with self._get_connection() as conn:
-            return pd.read_sql_query(query, conn, params=params)
+    def run_query_pandas(self, query, params=None):
+        """Run a query and return the results as a pandas DataFrame."""
+        try:
+            with self._get_connection() as conn:
+                if params:
+                    return pd.read_sql_query(query, conn, params=params)
+                else:
+                    return pd.read_sql_query(query, conn)
+        except Exception as e:
+            print(f"ERROR in run_query_pandas: {str(e)}")
+            print(f"Query: {query}")
+            print(f"Params: {params}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def get_schema(self):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = "PRAGMA table_info(transactions)"
-            result = cursor.run_query_pandas(query)
-            print(result)
+            result = pd.read_sql_query(query, conn)
+            return result
+
+    def get_merchant_categories(self, merchant_name):
+        """Get categories for a specific merchant."""
+        try:
+            query = """
+            SELECT 
+                c.id, 
+                c.name, 
+                c.color, 
+                c.icon
+            FROM 
+                categories c
+            JOIN 
+                merchant_categories mc ON c.id = mc.category_id
+            WHERE 
+                mc.merchant_name = ?;
+            """
+            
+            with self._get_connection() as conn:
+                df = pd.read_sql_query(query, conn, params=(merchant_name,))
+                
+            if df.empty:
+                return []
+                
+            return df.to_dict(orient="records")
+        except Exception as e:
+            print(f"Error getting categories for merchant {merchant_name}: {e}")
+            return []
