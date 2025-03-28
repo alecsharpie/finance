@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
@@ -6,8 +6,10 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import json
 import pandas as pd
+import tempfile
 
 from finance.db import FinanceDB
+from finance.dataloader_commbank import process_commbank_transactions_file
 
 # Add parent directory to path to import database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -764,6 +766,52 @@ def get_raw_transactions(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch raw transactions: {str(e)}")
+
+@app.post("/transactions/upload/commbank")
+async def upload_commbank_transactions(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db_path: str = Query("data/finance-stag.db", description="Database path")
+):
+    """Upload and process Commonwealth Bank transactions CSV file."""
+    try:
+        # Create a temporary file to store the uploaded content
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            # Write the uploaded file content to the temp file
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        # Get an estimate of the number of rows to process
+        with open(temp_file_path, 'r', encoding='utf-8') as f:
+            row_count = sum(1 for _ in f) - 1  # Subtract 1 for header
+        
+        # Process the file in the background to avoid timeout
+        background_tasks.add_task(
+            process_commbank_transactions_file,
+            temp_file_path,
+            db_path,
+            model="gemma2:2b"
+        )
+        
+        # Return success response with estimated processing time
+        estimated_time = max(1, row_count // 10)  # Rough estimate: 10 rows per minute
+        
+        return {
+            "status": "success",
+            "message": f"File uploaded and processing started. Transactions will be added to the database.",
+            "filename": file.filename,
+            "estimated_rows": row_count,
+            "estimated_time_minutes": estimated_time
+        }
+    except Exception as e:
+        # Clean up temp file if it exists
+        if 'temp_file_path' in locals():
+            os.unlink(temp_file_path)
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+    finally:
+        # Close the file
+        await file.close()
 
 # Run with: uvicorn main:app --reload --port 3001
 if __name__ == "__main__":

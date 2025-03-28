@@ -2,9 +2,11 @@ import csv
 from typing import List
 import argparse
 from tqdm import tqdm
+import os
+import tempfile
 
-from db import FinanceDB, calculate_row_hash, parse_date
-from llm import query_ollama, parse_json_response, is_valid_json
+from finance.db import FinanceDB, calculate_row_hash, parse_date
+from finance.llm import query_ollama, parse_json_response, is_valid_json
 
 def create_commbank_prompt(transaction: List[str]) -> str:
     """Create a prompt for the LLM with examples and the current transaction."""
@@ -98,43 +100,76 @@ Output:
 """
     return prompt
 
-def process_commbank_transactions_file(input_file: str, db_path: str, model: str = "gemma2:9b"):
-    """Process the entire transactions file using Ollama and write to an sqllite db.
-    Expects a csv with columns: date, amount, original_description, balance.
-    E.g. 26/10/2024,'-7.73','UBER* TRIP','+232.41'"""
+def process_commbank_transactions_file(file_path, db_path, model="gemma2:2b"):
+    """Process a Commonwealth Bank transactions CSV file and insert into database."""
+    print(f"Processing file: {file_path}")
+    print(f"Using database: {db_path}")
+    print(f"Using model: {model}")
+    
+    # Initialize database
     db = FinanceDB(db_path)
-    with open(input_file, 'r', newline='') as infile:
-        reader = csv.reader(infile)
-        for row in tqdm(reader):
-            try:
-                row_hash = calculate_row_hash(','.join(row))
-                if db.transaction_exists(row_hash):
-                    continue
-                prompt = create_commbank_prompt(row)
-                response = query_ollama(prompt, model)
+    
+    # Read and process the CSV file
+    with open(file_path, 'r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        rows = list(reader)
+    
+    # Process transactions
+    for row in tqdm(rows, desc="Processing transactions"):
+        if len(row) >= 4:  # Ensure row has enough columns
+            date = row[0]
+            description = row[1]
+            amount = row[2]
+            balance = row[3]
+            
+            # Skip header row or rows without proper data
+            if date == "Date" or not date or not amount:
+                continue
+                
+            # Create prompt for LLM
+            prompt = create_commbank_prompt(description)
+            
+            # Query LLM
+            response = query_ollama(prompt, model=model)
+            
+            # Parse response
+            if is_valid_json(response):
                 parsed_data = parse_json_response(response)
                 
-                parsed_date = parse_date(row[0])
+                # Calculate hash for deduplication
+                row_hash = calculate_row_hash(date, description, amount)
                 
-                transaction_data = {
-                    'date': parsed_date,
-                    'amount': row[1],
-                    'balance': row[3],
-                    'original_description': row[2],
-                    'merchant_name': parsed_data.get('merchant_name', ''),
-                    'transaction_type': parsed_data.get('transaction_type', ''),
-                    'location': parsed_data.get('location', ''),
-                    'currency': parsed_data.get('currency', ''),
-                    'last_4_card_number': parsed_data.get('last_4_card_number', ''),
-                    'hash': row_hash,
-                    'source': 'commbank'
-                }
+                # Format date if present in parsed data
+                transaction_date = parsed_data.get('date')
+                if transaction_date:
+                    parsed_date = parse_date(transaction_date)
+                    if parsed_date:
+                        date = parsed_date
                 
-                db.insert_transaction(transaction_data, row_hash)
-                
-            except Exception as e:
-                print(f"Error processing row: {row}")
-                print(f"Error details: {str(e)}")
+                # Insert into database
+                db.insert_transaction(
+                    date=date,
+                    amount=amount,
+                    balance=balance,
+                    original_description=description,
+                    merchant_name=parsed_data.get('merchant_name'),
+                    transaction_type=parsed_data.get('transaction_type'),
+                    location=parsed_data.get('location'),
+                    currency=parsed_data.get('currency'),
+                    last_4_card_number=parsed_data.get('last_4_card_number'),
+                    hash=row_hash,
+                    source="commbank"
+                )
+    
+    # Clean up the temporary file
+    try:
+        os.unlink(file_path)
+        print(f"Temporary file {file_path} deleted")
+    except Exception as e:
+        print(f"Warning: Could not delete temporary file {file_path}: {e}")
+    
+    print(f"Processing complete. Transactions added to database.")
+    return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

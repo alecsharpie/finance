@@ -110,6 +110,9 @@ const FinancialCalendar = () => {
       const year = parseInt(period);
       newStartDate = `${year}-01-01`;
       newEndDate = `${year}-12-31`;
+      
+      // Set the current year for the monthly view
+      setCurrentYear(year);
     } else if (viewMode === 'monthly') {
       // Drill down from month to days - show all days in the selected month
       newViewMode = 'daily';
@@ -118,6 +121,10 @@ const FinancialCalendar = () => {
       const endDate = new Date(year, month, 0); // Last day of the month
       newStartDate = startDate.toISOString().split('T')[0];
       newEndDate = endDate.toISOString().split('T')[0];
+      
+      // Set the current year and month for the daily view
+      setCurrentYear(parseInt(year));
+      setCurrentMonth(parseInt(month));
     } else if (viewMode === 'daily') {
       // Drill down from day to hours - show all transactions for the selected day
       newViewMode = 'hourly';

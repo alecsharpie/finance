@@ -189,4 +189,22 @@ export const fetchRawTransactions = async (limit = 1000, offset = 0) => {
     console.error('Error fetching raw transactions:', error);
     throw error;
   }
+};
+
+export const uploadCommbankTransactions = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await axios.post(`${API_BASE_URL}/transactions/upload/commbank`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading transactions:', error);
+    throw error;
+  }
 }; 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRawTransactions, fetchCategories, fetchMerchantCategories } from '../services/api';
+import { fetchRawTransactions, fetchCategories, fetchMerchantCategories, uploadCommbankTransactions } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const RawTransactions = () => {
@@ -28,6 +28,15 @@ const RawTransactions = () => {
   // Get unique values for filter dropdowns
   const [uniqueTypes, setUniqueTypes] = useState([]);
   const [uniqueSources, setUniqueSources] = useState([]);
+
+  // Add these state variables to your component
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Add these state variables for progress tracking
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [progressInterval, setProgressInterval] = useState(null);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -275,6 +284,150 @@ const RawTransactions = () => {
     document.body.removeChild(link);
   };
 
+  // Modify the handleFileUpload function to include progress simulation
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    try {
+      setIsUploading(true);
+      setUploadStatus({ type: 'info', message: 'Uploading file...' });
+      setUploadProgress(0);
+      
+      // Start simulated progress
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          // Slowly increase progress up to 90% (the last 10% will be completed when the server responds)
+          if (prev < 90) {
+            return prev + (Math.random() * 2);
+          }
+          return prev;
+        });
+      }, 500);
+      
+      setProgressInterval(interval);
+      
+      const result = await uploadCommbankTransactions(file);
+      
+      // Complete the progress
+      clearInterval(interval);
+      setUploadProgress(100);
+      
+      setUploadStatus({ 
+        type: 'success', 
+        message: 'File uploaded successfully! Processing has started in the background. Refresh the page in a few minutes to see new transactions.' 
+      });
+      
+      // Reset the file input
+      event.target.value = null;
+      
+      // Reset progress after a delay
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 3000);
+      
+    } catch (err) {
+      // Clear the interval if there's an error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        setProgressInterval(null);
+      }
+      
+      setUploadProgress(0);
+      console.error('Upload failed:', err);
+      setUploadStatus({ 
+        type: 'error', 
+        message: `Upload failed: ${err.response?.data?.detail || err.message}` 
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Update the closeUploadModal function to clear the interval
+  const closeUploadModal = () => {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      setProgressInterval(null);
+    }
+    setUploadProgress(0);
+    setShowUploadModal(false);
+    // Clear status after a delay when closing
+    setTimeout(() => setUploadStatus(null), 300);
+  };
+
+  // Update the UploadModal component to include the progress bar
+  const UploadModal = () => {
+    if (!showUploadModal) return null;
+    
+    return (
+      <div className="upload-modal-overlay">
+        <div className="upload-modal">
+          <div className="upload-modal-header">
+            <h3>Upload Commonwealth Bank Transactions</h3>
+            <button className="close-button" onClick={closeUploadModal}>×</button>
+          </div>
+          
+          <div className="upload-modal-content">
+            <p>
+              Upload a CSV file exported from Commonwealth Bank to add transactions to your database.
+              The file will be processed using a local LLM (Gemma2) to extract transaction details.
+            </p>
+            
+            <div className="upload-instructions">
+              <h4>Instructions:</h4>
+              <ol>
+                <li>Export your transactions from Commonwealth Bank as a CSV file</li>
+                <li>Make sure Ollama is running with the Gemma2 model</li>
+                <li>Upload the file using the button below</li>
+                <li>Wait for processing to complete (this may take a few minutes)</li>
+                <li>Refresh the page to see your new transactions</li>
+              </ol>
+            </div>
+            
+            {uploadProgress > 0 && (
+              <div className="progress-container">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <div className="progress-text">
+                  {uploadProgress < 100 ? (
+                    <>Processing transactions... {Math.round(uploadProgress)}%</>
+                  ) : (
+                    <>Processing complete! ✓</>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {uploadStatus && (
+              <div className={`upload-status ${uploadStatus.type}`}>
+                {uploadStatus.message}
+              </div>
+            )}
+            
+            <div className="upload-controls">
+              <input
+                type="file"
+                id="transaction-file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="file-input"
+              />
+              <label htmlFor="transaction-file" className={`file-input-label ${isUploading ? 'disabled' : ''}`}>
+                {isUploading ? 'Processing...' : 'Select CSV File'}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading && transactions.length === 0) {
     return (
       <div className="loading-container">
@@ -306,6 +459,12 @@ const RawTransactions = () => {
             onClick={() => setShowFilters(!showFilters)}
           >
             {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+          <button 
+            className="upload-button"
+            onClick={() => setShowUploadModal(true)}
+          >
+            Upload CSV
           </button>
           <button 
             className="export-button"
@@ -508,6 +667,8 @@ const RawTransactions = () => {
           </div>
         </div>
       )}
+
+      <UploadModal />
     </div>
   );
 };
