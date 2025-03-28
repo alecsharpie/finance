@@ -195,25 +195,68 @@ const SubscriptionTracker = () => {
     );
     
     return (
-      <div className="subscription-list">
-        <div className="subscription-header-controls">
+      <div className="subscription-list" style={{
+        padding: '1.5rem',
+        backgroundColor: 'var(--ghibli-cream)',
+        borderRadius: '12px'
+      }}>
+        <div className="subscription-header-controls" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid rgba(125, 107, 145, 0.2)',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
           <div className="subscription-title-section">
-            <h3>Detected Subscriptions</h3>
-            <div className="subscription-summary">
+            <h3 style={{
+              margin: '0 0 0.5rem 0',
+              color: 'var(--text)',
+              fontSize: '1.5rem'
+            }}>Detected Subscriptions</h3>
+            <div className="subscription-summary" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              color: 'var(--text-light)'
+            }}>
               <span className="subscription-count">{sortedSubscriptions.length} subscriptions</span>
-              <span className="subscription-total">
+              <span className="subscription-total" style={{
+                fontWeight: '600',
+                color: 'var(--primary)'
+              }}>
                 Total yearly cost: {formatCurrency(totalYearlyCost)}
               </span>
             </div>
           </div>
           
-          <div className="subscription-controls">
-            <div className="sort-controls">
-              <label>Sort by:</label>
+          <div className="subscription-controls" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            alignItems: 'flex-end'
+          }}>
+            <div className="sort-controls" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <label style={{ color: 'var(--text-light)' }}>Sort by:</label>
               <select 
                 value={sortBy} 
                 onChange={(e) => setSortBy(e.target.value)}
                 className="sort-select"
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '20px',
+                  border: 'none',
+                  backgroundColor: 'white',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                  color: 'var(--text)',
+                  cursor: 'pointer'
+                }}
               >
                 <option value="cost">Highest Cost</option>
                 <option value="name">Name</option>
@@ -221,11 +264,20 @@ const SubscriptionTracker = () => {
               </select>
             </div>
             
-            <label className="show-all-toggle">
+            <label className="show-all-toggle" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              cursor: 'pointer',
+              color: 'var(--text-light)'
+            }}>
               <input 
                 type="checkbox" 
                 checked={showAll} 
                 onChange={() => setShowAll(!showAll)} 
+                style={{
+                  accentColor: 'var(--primary)'
+                }}
               />
               <span className="toggle-label">Show all recurring transactions</span>
             </label>
@@ -233,36 +285,96 @@ const SubscriptionTracker = () => {
         </div>
         
         {sortedSubscriptions.length === 0 ? (
-          <p>No subscription patterns detected. Try enabling "Show all recurring transactions".</p>
+          <p style={{
+            textAlign: 'center',
+            padding: '3rem',
+            color: 'var(--text-light)',
+            fontStyle: 'italic',
+            backgroundColor: 'rgba(125, 107, 145, 0.05)',
+            borderRadius: '8px',
+            margin: '1rem 0'
+          }}>No subscription patterns detected. Try enabling "Show all recurring transactions".</p>
         ) : (
-          <div className="subscription-items">
+          <div className="subscription-items" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '1.25rem'
+          }}>
             {sortedSubscriptions.map((sub, idx) => (
-              <div key={idx} className="subscription-item">
-                <div className="subscription-header">
+              <div key={idx} className="subscription-item" style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                transition: 'all 0.2s ease',
+                border: 'none'
+              }}>
+                <div className="subscription-header" style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.25rem',
+                  paddingBottom: '0.75rem',
+                  borderBottom: '1px solid rgba(125, 107, 145, 0.1)'
+                }}>
                   <div>
-                    <h4>{sub.merchant}</h4>
-                    <div className="subscription-frequency">
+                    <h4 style={{
+                      margin: '0 0 0.25rem 0',
+                      color: 'var(--text)',
+                      fontSize: '1.1rem'
+                    }}>{sub.merchant}</h4>
+                    <div className="subscription-frequency" style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--text-light)'
+                    }}>
                       {sub.frequency === 'monthly' ? 'Monthly subscription' : 
                        sub.frequency === 'quarterly' ? 'Quarterly subscription' : 
                        sub.frequency === 'yearly' ? 'Yearly subscription' : 
                        `Recurring payment (${sub.count} occurrences)`}
                     </div>
                   </div>
-                  <div className="subscription-amount">
-                    <div className="amount-value">{formatCurrency(sub.avgAmount)}</div>
-                    <div className="amount-yearly">
+                  <div className="subscription-amount" style={{
+                    textAlign: 'right'
+                  }}>
+                    <div className="amount-value" style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '600',
+                      color: 'var(--primary)'
+                    }}>{formatCurrency(sub.avgAmount)}</div>
+                    <div className="amount-yearly" style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-light)'
+                    }}>
                       {sub.yearlyTotal ? `~${formatCurrency(sub.yearlyTotal)}/year` : ''}
                     </div>
                   </div>
                 </div>
                 
                 <div className="subscription-transactions">
-                  <div className="transactions-header">Recent transactions:</div>
-                  <div className="transactions-list">
+                  <div className="transactions-header" style={{
+                    fontWeight: '500',
+                    marginBottom: '0.75rem',
+                    color: 'var(--text)',
+                    fontSize: '0.9rem'
+                  }}>Recent transactions:</div>
+                  <div className="transactions-list" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}>
                     {sub.transactions.slice(0, 3).map((tx, i) => (
-                      <div key={i} className="transaction-item">
-                        <span>{tx.date}</span>
-                        <span>{formatCurrency(Math.abs(parseFloat(tx.amount)))}</span>
+                      <div key={i} className="transaction-item" style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '0.5rem',
+                        backgroundColor: 'rgba(125, 107, 145, 0.05)',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem'
+                      }}>
+                        <span style={{ color: 'var(--text-light)' }}>{tx.date}</span>
+                        <span style={{ 
+                          fontWeight: '500',
+                          color: 'var(--primary)'
+                        }}>{formatCurrency(Math.abs(parseFloat(tx.amount)))}</span>
                       </div>
                     ))}
                   </div>
@@ -275,11 +387,32 @@ const SubscriptionTracker = () => {
     );
   };
 
-  if (loading) return <p>Loading subscription data...</p>;
-  if (error) return <p className="error">{error}</p>;
+  if (loading) return (
+    <div style={{
+      textAlign: 'center',
+      padding: '3rem',
+      color: 'var(--text-light)',
+      backgroundColor: 'var(--ghibli-cream)',
+      borderRadius: '12px'
+    }}>
+      Loading subscription data...
+    </div>
+  );
+  
+  if (error) return (
+    <div className="error" style={{
+      backgroundColor: '#fee2e2',
+      color: '#ef4444',
+      padding: '1rem',
+      borderRadius: '8px',
+      margin: '1rem 0'
+    }}>{error}</div>
+  );
 
   return (
-    <div className="subscription-tracker">
+    <div className="subscription-tracker" style={{
+      padding: '0'
+    }}>
       {renderSubscriptionList()}
     </div>
   );

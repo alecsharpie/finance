@@ -113,12 +113,12 @@ const FinancialCalendar = () => {
       return periodTotal > max ? periodTotal : max;
     }, 0);
     
-    // Calculate the height of the bar as a percentage of the maximum spending
-    const barHeight = maxSpending > 0 ? (totalSpending / maxSpending) * 100 : 0;
+    // Calculate the width of the bar as a percentage of the maximum spending
+    const barWidth = maxSpending > 0 ? (totalSpending / maxSpending) * 100 : 0;
     
     // Calculate proportions for recurring and one-time spending
-    const recurringHeight = totalSpending > 0 ? (data.recurring.total / totalSpending) * barHeight : 0;
-    const oneTimeHeight = totalSpending > 0 ? (data['one-time'].total / totalSpending) * barHeight : 0;
+    const recurringWidth = totalSpending > 0 ? (data.recurring.total / totalSpending) * barWidth : 0;
+    const oneTimeWidth = totalSpending > 0 ? (data['one-time'].total / totalSpending) * barWidth : 0;
     
     // Check if this period is the currently selected one
     const isSelected = period === selectedPeriod;
@@ -134,41 +134,43 @@ const FinancialCalendar = () => {
       >
         <div className="time-block-header">
           <span className="period-label">{formatPeriodLabel(period)}</span>
+        </div>
+        
+        <div className="amount-display">
           <span className="total-amount">{formatCurrency(totalSpending)}</span>
         </div>
         
         <div className="spending-bar-container">
           <div 
             className="spending-bar"
-            style={{ height: `${barHeight}%` }}
+            style={{ width: `${barWidth}%` }}
             title={`Total: ${formatCurrency(totalSpending)}`}
           >
             <div 
               className="recurring-portion"
-              style={{ height: `${recurringHeight / barHeight * 100}%` }}
+              style={{ width: `${recurringWidth / barWidth * 100}%` }}
               title={`Recurring: ${formatCurrency(data.recurring.total)}`}
             />
             <div 
               className="one-time-portion"
-              style={{ height: `${oneTimeHeight / barHeight * 100}%` }}
+              style={{ 
+                width: `${oneTimeWidth / barWidth * 100}%`,
+                left: `${recurringWidth / barWidth * 100}%`
+              }}
               title={`One-time: ${formatCurrency(data['one-time'].total)}`}
             />
           </div>
         </div>
         
-        <div className="merchant-tags">
-          {[...data.recurring.transactions, ...data['one-time'].transactions]
-            .sort((a, b) => b.amount - a.amount)
-            .slice(0, 3)
-            .map((tx, i) => (
-              <span 
-                key={`${period}-merchant-${i}`}
-                className={`merchant-tag ${tx.type.toLowerCase()}`}
-                title={`${tx.merchant}: ${formatCurrency(tx.amount)}`}
-              >
-                {tx.merchant ? tx.merchant.split(' ')[0] : 'Unknown'}
-              </span>
-            ))}
+        <div className="amount-breakdown">
+          <div className="recurring-amount">
+            <div className="legend-color recurring"></div>
+            <span>{formatCurrency(data.recurring.total)}</span>
+          </div>
+          <div className="one-time-amount">
+            <div className="legend-color one-time"></div>
+            <span>{formatCurrency(data['one-time'].total)}</span>
+          </div>
         </div>
       </div>
     );
