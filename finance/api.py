@@ -275,6 +275,31 @@ def get_subscriptions():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to analyze subscriptions: {str(e)}")
 
+@app.get("/transactions/timeline")
+def get_transaction_timeline():
+    """Get transactions for timeline view."""
+    try:
+        query = """
+        SELECT 
+            id,
+            date,
+            amount,
+            merchant_name,
+            transaction_type,
+            original_description
+        FROM 
+            transactions
+        WHERE 
+            date >= date('now', '-3 months')
+        ORDER BY 
+            date DESC
+        """
+        
+        df = db.run_query_pandas(query)
+        return df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch transaction timeline: {str(e)}")
+
 # Run with: uvicorn main:app --reload --port 3001
 if __name__ == "__main__":
     import uvicorn

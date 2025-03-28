@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import RecurringTransactions from './components/RecurringTransactions';
 import MonthlySpending from './components/MonthlySpending';
 import SubscriptionTracker from './components/SubscriptionTracker';
+import SpendingTimeline from './components/SpendingTimeline';
 
 function App() {
+  const [activeTab, setActiveTab] = useState('subscriptions');
+
   return (
     <div className="container">
       <h1 style={{ 
@@ -14,17 +17,38 @@ function App() {
         Finance Dashboard
       </h1>
       
-      <div className="card">
-        <h2>Subscription Tracker</h2>
-        <SubscriptionTracker />
+      <div className="tab-navigation">
+        <button 
+          className={`tab-button ${activeTab === 'subscriptions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('subscriptions')}
+        >
+          Subscription Tracker
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('timeline')}
+        >
+          Spending Timeline
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'recurring' ? 'active' : ''}`}
+          onClick={() => setActiveTab('recurring')}
+        >
+          Recurring Transactions
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'monthly' ? 'active' : ''}`}
+          onClick={() => setActiveTab('monthly')}
+        >
+          Monthly Overview
+        </button>
       </div>
       
       <div className="card">
-        <RecurringTransactions />
-      </div>
-      
-      <div className="card">
-        <MonthlySpending />
+        {activeTab === 'subscriptions' && <SubscriptionTracker />}
+        {activeTab === 'timeline' && <SpendingTimeline />}
+        {activeTab === 'recurring' && <RecurringTransactions />}
+        {activeTab === 'monthly' && <MonthlySpending />}
       </div>
     </div>
   );

@@ -52,4 +52,14 @@ export const fetchSubscriptions = async () => {
     console.error('Error fetching subscriptions:', error);
     throw error;
   }
+};
+
+export const fetchTransactionTimeline = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/transactions/timeline`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching transaction timeline:', error);
+    throw error;
+  }
 }; 
