@@ -544,7 +544,7 @@ const FinancialCalendar = () => {
               {previousViewMode === 'yearly' ? drillDownPeriod : formatPeriodLabel(drillDownPeriod)}
             </>
           ) : (
-            'Calendar'
+            'Spending Calendar'
           )}
         </h2>
         

@@ -15,7 +15,7 @@ function App() {
           className={`tab-button ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
         >
-          Calendar
+          Spending Calendar
         </button>
         <button 
           className={`tab-button ${activeTab === 'subscriptions' ? 'active' : ''}`}
