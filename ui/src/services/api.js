@@ -96,42 +96,47 @@ export const createCategory = async (categoryData) => {
   }
 };
 
-export const fetchMerchantCategories = async (merchantName) => {
+export const fetchMerchantCategories = async (merchantName, bypassCache = false) => {
   try {
     // Check if we've already tried to fetch this merchant's categories recently
-    // This helps avoid repeated 404 errors for the same merchant
     const cacheKey = `merchant_category_${merchantName}`;
     const cachedResult = sessionStorage.getItem(cacheKey);
+    const cachedTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
     
-    if (cachedResult) {
+    // Only use cache if it's less than 5 minutes old and bypassCache is false
+    const cacheAge = cachedTimestamp ? Date.now() - parseInt(cachedTimestamp) : Infinity;
+    const cacheValid = cacheAge < 300000 && !bypassCache; // 5 minutes
+    
+    if (cachedResult && cacheValid) {
       return JSON.parse(cachedResult);
     }
     
     const response = await axios.get(`${API_BASE_URL}/merchants/${encodeURIComponent(merchantName)}/categories`);
     const data = response.data;
     
-    // Cache the result for 5 minutes
+    // Cache the result
     sessionStorage.setItem(cacheKey, JSON.stringify(data));
     sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
     
     return data;
   } catch (error) {
-    // Instead of logging every 404, just cache an empty result
+    // Cache 404 responses to prevent repeated requests
     if (error.response && error.response.status === 404) {
-      // Cache empty result to prevent repeated requests
       const cacheKey = `merchant_category_${merchantName}`;
       sessionStorage.setItem(cacheKey, JSON.stringify([]));
       sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-      
-      // Only log in development environment
-      if (process.env.NODE_ENV === 'development') {
-        // Use a more subtle console method
-        console.debug(`No categories found for merchant: ${merchantName}`);
-      }
       return [];
     }
     
-    // For other errors, still log them but return empty array
+    // For network errors, also cache to prevent overwhelming the server
+    if (error.code === 'ERR_NETWORK' || error.code === 'ERR_INSUFFICIENT_RESOURCES') {
+      const cacheKey = `merchant_category_${merchantName}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify([]));
+      sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+      console.warn(`Network error fetching categories for ${merchantName}, using empty cache`);
+      return [];
+    }
+    
     console.error(`Error fetching categories for merchant ${merchantName}:`, error);
     return [];
   }
@@ -207,4 +212,69 @@ export const uploadCommbankTransactions = async (file) => {
     console.error('Error uploading transactions:', error);
     throw error;
   }
+};
+
+export const fetchMerchantCategoriesBatch = async (merchantNames) => {
+  try {
+    // Filter out any merchant names that are already cached
+    const uncachedMerchants = merchantNames.filter(name => {
+      const cacheKey = `merchant_category_${name}`;
+      const cachedResult = sessionStorage.getItem(cacheKey);
+      const cachedTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
+      
+      // Check if we have a valid cache
+      const cacheAge = cachedTimestamp ? Date.now() - parseInt(cachedTimestamp) : Infinity;
+      return !(cachedResult && cacheAge < 300000); // 5 minutes cache
+    });
+    
+    // If all merchants are cached, return empty object (we'll get from cache later)
+    if (uncachedMerchants.length === 0) {
+      return {};
+    }
+    
+    // Make the batch request
+    const response = await axios.post(`${API_BASE_URL}/merchants/categories/batch`, uncachedMerchants);
+    const data = response.data || {};
+    
+    // Cache each merchant's categories
+    Object.entries(data).forEach(([merchantName, categories]) => {
+      const cacheKey = `merchant_category_${merchantName}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify(categories));
+      sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+    });
+    
+    // For merchants that weren't in the response, cache empty arrays
+    uncachedMerchants.forEach(merchantName => {
+      if (!data[merchantName]) {
+        const cacheKey = `merchant_category_${merchantName}`;
+        sessionStorage.setItem(cacheKey, JSON.stringify([]));
+        sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+      }
+    });
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching merchant categories batch:', error);
+    
+    // Cache empty results for all requested merchants to prevent repeated failures
+    merchantNames.forEach(merchantName => {
+      const cacheKey = `merchant_category_${merchantName}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify([]));
+      sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+    });
+    
+    return {};
+  }
+};
+
+// Helper function to get categories from cache or use batch result
+export const getMerchantCategoryFromCacheOrBatch = (merchantName, batchResults) => {
+  const cacheKey = `merchant_category_${merchantName}`;
+  const cachedResult = sessionStorage.getItem(cacheKey);
+  
+  if (cachedResult) {
+    return JSON.parse(cachedResult);
+  }
+  
+  return batchResults[merchantName] || [];
 }; 

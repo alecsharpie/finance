@@ -528,7 +528,7 @@ def create_category(category: dict):
 
 @app.get("/merchants/{merchant_name}/categories")
 def get_merchant_categories(merchant_name: str):
-    """Get all categories for a merchant."""
+    """Get categories for a specific merchant."""
     try:
         print(f"Fetching categories for merchant: {merchant_name}")
         
@@ -771,7 +771,7 @@ def get_raw_transactions(
 async def upload_commbank_transactions(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db_path: str = Query("data/finance-stag.db", description="Database path")
+    db_path: str = Query("data/finance-prod.db", description="Database path")
 ):
     """Upload and process Commonwealth Bank transactions CSV file."""
     try:
@@ -802,16 +802,55 @@ async def upload_commbank_transactions(
             "message": f"File uploaded and processing started. Transactions will be added to the database.",
             "filename": file.filename,
             "estimated_rows": row_count,
-            "estimated_time_minutes": estimated_time
+            "estimated_time_minutes": estimated_time,
+            "saved_path": temp_file_path
         }
     except Exception as e:
-        # Clean up temp file if it exists
-        if 'temp_file_path' in locals():
-            os.unlink(temp_file_path)
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
     finally:
         # Close the file
         await file.close()
+
+@app.post("/merchants/categories/batch")
+def get_merchant_categories_batch(merchant_names: List[str]):
+    """Get categories for multiple merchants in a single request."""
+    try:
+        if not merchant_names:
+            return {}
+            
+        # Create placeholders for the SQL query
+        placeholders = ','.join(['?'] * len(merchant_names))
+        
+        query = f"""
+        SELECT 
+            mc.merchant_name,
+            c.id, 
+            c.name, 
+            c.color, 
+            c.icon
+        FROM 
+            categories c
+        JOIN 
+            merchant_categories mc ON c.id = mc.category_id
+        WHERE 
+            mc.merchant_name IN ({placeholders});
+        """
+        
+        df = db.run_query_pandas(query, tuple(merchant_names))
+        
+        # Group by merchant_name
+        result = {}
+        if not df.empty:
+            # Convert to records grouped by merchant_name
+            for merchant_name, group in df.groupby('merchant_name'):
+                # Remove merchant_name column from the group data
+                categories = group.drop('merchant_name', axis=1).to_dict(orient="records")
+                result[merchant_name] = categories
+                
+        return result
+    except Exception as e:
+        print(f"ERROR in get_merchant_categories_batch: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch merchant categories batch: {str(e)}")
 
 # Run with: uvicorn main:app --reload --port 3001
 if __name__ == "__main__":

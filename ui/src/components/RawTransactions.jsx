@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRawTransactions, fetchCategories, fetchMerchantCategories, uploadCommbankTransactions } from '../services/api';
+import { fetchRawTransactions, fetchCategories, fetchMerchantCategories, uploadCommbankTransactions, fetchMerchantCategoriesBatch, getMerchantCategoryFromCacheOrBatch } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const RawTransactions = () => {
@@ -83,31 +83,29 @@ const RawTransactions = () => {
     const loadMerchantCategories = async () => {
       if (!transactions.length) return;
       
-      const merchantCategoriesMap = {};
-      
-      // Process merchants in batches to avoid too many concurrent requests
+      // Get unique merchants from visible transactions
       const uniqueMerchants = [...new Set(transactions
         .filter(tx => tx.merchant_name)
         .map(tx => tx.merchant_name))];
       
-      const batchSize = 10;
-      for (let i = 0; i < uniqueMerchants.length; i += batchSize) {
-        const batch = uniqueMerchants.slice(i, i + batchSize);
+      // Fetch all categories in a single batch request
+      try {
+        const batchResults = await fetchMerchantCategoriesBatch(uniqueMerchants);
         
-        await Promise.all(batch.map(async (merchantName) => {
-          try {
-            const categoriesData = await fetchMerchantCategories(merchantName);
-            if (categoriesData && categoriesData.length > 0) {
-              merchantCategoriesMap[merchantName] = categoriesData[0].id;
-            }
-          } catch (err) {
-            // Just log the error but continue processing
-            console.error(`Error loading categories for ${merchantName}:`, err);
+        // Process the results
+        const merchantCategoriesMap = {...merchantCategories};
+        
+        uniqueMerchants.forEach(merchantName => {
+          const categories = getMerchantCategoryFromCacheOrBatch(merchantName, batchResults);
+          if (categories.length > 0) {
+            merchantCategoriesMap[merchantName] = categories[0].id;
           }
-        }));
+        });
+        
+        setMerchantCategories(merchantCategoriesMap);
+      } catch (err) {
+        console.error("Error loading merchant categories:", err);
       }
-      
-      setMerchantCategories(merchantCategoriesMap);
     };
     
     loadMerchantCategories();

@@ -12,8 +12,12 @@ wheels/
 
 # Data
 raw_data/
+test_data/
 finance-prod.db
 finance-stag.db
 
 # Node
 node_modules/
+
+# OS
+.DS_Store

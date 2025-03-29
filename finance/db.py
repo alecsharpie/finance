@@ -14,9 +14,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def calculate_row_hash(row_data: str) -> str:
-    """Calculate hash from raw row data before processing."""
-    return hashlib.sha256(f"{row_data}".encode()).hexdigest()
+def calculate_row_hash(date: str, description: str, amount: str) -> str:
+    """Calculate hash from transaction data for deduplication."""
+    return hashlib.sha256(f"{date}|{description}|{amount}".encode()).hexdigest()
 
 def parse_date(date_str: str) -> str:
     """Parse the date string and return it in YYYY-MM-DD format."""
@@ -30,7 +30,7 @@ def parse_date(date_str: str) -> str:
         return None
  
 class FinanceDB:
-    def __init__(self, db_path: str = 'data/finance-stag.db'):
+    def __init__(self, db_path: str = 'data/finance-prod.db'):
         self.db_path = db_path
         self._ensure_db_exists()
         self._initialize_db()

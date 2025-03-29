@@ -4,6 +4,10 @@ import argparse
 from tqdm import tqdm
 import os
 import tempfile
+import sys
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from finance.db import FinanceDB, calculate_row_hash, parse_date
 from finance.llm import query_ollama, parse_json_response, is_valid_json
@@ -146,27 +150,23 @@ def process_commbank_transactions_file(file_path, db_path, model="gemma2:2b"):
                     if parsed_date:
                         date = parsed_date
                 
+                # Create transaction data dictionary
+                transaction_data = {
+                    "date": date,
+                    "amount": amount,
+                    "balance": balance,
+                    "original_description": description,
+                    "merchant_name": parsed_data.get('merchant_name'),
+                    "transaction_type": parsed_data.get('transaction_type'),
+                    "location": parsed_data.get('location'),
+                    "currency": parsed_data.get('currency'),
+                    "last_4_card_number": parsed_data.get('last_4_card_number'),
+                    "hash": row_hash,
+                    "source": "commbank"
+                }
+                
                 # Insert into database
-                db.insert_transaction(
-                    date=date,
-                    amount=amount,
-                    balance=balance,
-                    original_description=description,
-                    merchant_name=parsed_data.get('merchant_name'),
-                    transaction_type=parsed_data.get('transaction_type'),
-                    location=parsed_data.get('location'),
-                    currency=parsed_data.get('currency'),
-                    last_4_card_number=parsed_data.get('last_4_card_number'),
-                    hash=row_hash,
-                    source="commbank"
-                )
-    
-    # Clean up the temporary file
-    try:
-        os.unlink(file_path)
-        print(f"Temporary file {file_path} deleted")
-    except Exception as e:
-        print(f"Warning: Could not delete temporary file {file_path}: {e}")
+                db.insert_transaction(transaction_data, row_hash)
     
     print(f"Processing complete. Transactions added to database.")
     return True
@@ -175,6 +175,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", "-i", help="Input file path", type=str, required=True)
     parser.add_argument("--db-path", "-d", help="Database path", type=str, default="data/finance-stag.db")
+    parser.add_argument("--model", "-m", help="LLM model to use", type=str, default="gemma2:2b")
     args = parser.parse_args()
-    print(args)
-    process_commbank_transactions_file(args.input_file, args.db_path, model="gemma2:2b")
+    
+    print(f"Processing file: {args.input_file}")
+    print(f"Using database: {args.db_path}")
+    print(f"Using model: {args.model}")
+    
+    process_commbank_transactions_file(args.input_file, args.db_path, model=args.model)

@@ -102,6 +102,7 @@ uv sync
 
 Run the python script with the input file
 ```bash
-python finance/dataloader_commbank.py --i "raw_data/transactions.csv"
+   uv run python finance/dataloader_commbank.py -i "raw_data/commbank_outgoing_transactions.csv" --db-path "data/finance-prod.db" 
+
 ```
 

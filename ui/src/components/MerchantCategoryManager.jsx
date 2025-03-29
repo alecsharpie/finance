@@ -6,7 +6,9 @@ import {
   deleteCategory,
   fetchMerchantCategories,
   addMerchantCategory,
-  removeMerchantCategory
+  removeMerchantCategory,
+  fetchMerchantCategoriesBatch,
+  getMerchantCategoryFromCacheOrBatch
 } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 
@@ -14,6 +16,7 @@ const MerchantCategoryManager = () => {
   const [merchants, setMerchants] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
@@ -23,6 +26,8 @@ const MerchantCategoryManager = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [merchantCategories, setMerchantCategories] = useState({});
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadedMerchants, setLoadedMerchants] = useState(new Set());
   
   // Load merchants and categories on component mount or refresh
   useEffect(() => {
@@ -64,48 +69,6 @@ const MerchantCategoryManager = () => {
     loadData();
   }, [refreshTrigger]);
   
-  // Load all merchant categories
-  useEffect(() => {
-    const loadAllMerchantCategories = async () => {
-      if (!merchants.length) return;
-      
-      setLoading(true);
-      const merchantCategoriesMap = {};
-      
-      // Process merchants in larger batches to reduce console noise
-      const batchSize = 25;
-      for (let i = 0; i < merchants.length; i += batchSize) {
-        const batch = merchants.slice(i, i + batchSize);
-        
-        // Use Promise.allSettled instead of Promise.all to handle errors gracefully
-        const results = await Promise.allSettled(batch.map(async (merchant) => {
-          try {
-            const categoriesData = await fetchMerchantCategories(merchant.merchant_name);
-            if (categoriesData && categoriesData.length > 0) {
-              return { merchantName: merchant.merchant_name, categoryId: categoriesData[0].id };
-            }
-            return null;
-          } catch (err) {
-            // Just return null on error
-            return null;
-          }
-        }));
-        
-        // Process successful results
-        results.forEach(result => {
-          if (result.status === 'fulfilled' && result.value) {
-            merchantCategoriesMap[result.value.merchantName] = result.value.categoryId;
-          }
-        });
-      }
-      
-      setMerchantCategories(merchantCategoriesMap);
-      setLoading(false);
-    };
-    
-    loadAllMerchantCategories();
-  }, [merchants]);
-  
   // Filter merchants based on search term and category filter
   const filteredMerchants = merchants.filter(merchant => {
     // Text search filter
@@ -130,6 +93,73 @@ const MerchantCategoryManager = () => {
   const currentMerchants = filteredMerchants.slice(indexOfFirstMerchant, indexOfLastMerchant);
   const totalPages = Math.ceil(filteredMerchants.length / merchantsPerPage);
   
+  // Load all merchant categories with a more controlled approach
+  useEffect(() => {
+    const loadAllMerchantCategories = async () => {
+      if (!merchants.length) return;
+      
+      setCategoryLoading(true);
+      setLoadingProgress(0);
+      
+      try {
+        // First, focus on visible merchants
+        const visibleMerchants = filteredMerchants.slice(indexOfFirstMerchant, indexOfLastMerchant);
+        const visibleMerchantNames = visibleMerchants.map(m => m.merchant_name);
+        
+        // Fetch categories for visible merchants in one batch request
+        setLoadingProgress(10);
+        const visibleBatchResults = await fetchMerchantCategoriesBatch(visibleMerchantNames);
+        setLoadingProgress(50);
+        
+        // Process the results
+        const merchantCategoriesMap = {...merchantCategories};
+        
+        // Mark all visible merchants as loaded
+        const newLoadedMerchants = new Set([...loadedMerchants]);
+        visibleMerchantNames.forEach(name => newLoadedMerchants.add(name));
+        
+        // Update the categories map with results
+        visibleMerchantNames.forEach(merchantName => {
+          const categories = getMerchantCategoryFromCacheOrBatch(merchantName, visibleBatchResults);
+          if (categories.length > 0) {
+            merchantCategoriesMap[merchantName] = categories[0].id;
+          }
+        });
+        
+        // Update state with what we have so far
+        setLoadedMerchants(newLoadedMerchants);
+        setMerchantCategories(merchantCategoriesMap);
+        setLoadingProgress(75);
+        
+        // Optionally, load more merchants in the background
+        // This could be the next page or two of merchants
+        const nextPageMerchants = filteredMerchants
+          .slice(indexOfLastMerchant, indexOfLastMerchant + merchantsPerPage * 2)
+          .map(m => m.merchant_name);
+          
+        if (nextPageMerchants.length > 0) {
+          // No need to await this - let it happen in the background
+          fetchMerchantCategoriesBatch(nextPageMerchants)
+            .then(() => {
+              // Just mark these as loaded in the cache, we don't need to update state
+              // They'll be retrieved from cache when the user navigates to those pages
+            })
+            .catch(err => {
+              console.error("Error prefetching next page categories:", err);
+            });
+        }
+        
+        setLoadingProgress(100);
+      } catch (error) {
+        console.error("Error loading merchant categories:", error);
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+    
+    loadAllMerchantCategories();
+  }, [merchants, refreshTrigger, currentPage, merchantsPerPage, searchTerm, categoryFilter]);
+  
   // Handle category change for a merchant
   const handleCategoryChange = async (merchantName, categoryId) => {
     try {
@@ -145,21 +175,31 @@ const MerchantCategoryManager = () => {
             delete updated[merchantName];
             return updated;
           });
+          
+          // Clear the cache for this merchant
+          const cacheKey = `merchant_category_${merchantName}`;
+          sessionStorage.removeItem(cacheKey);
+          sessionStorage.removeItem(`${cacheKey}_timestamp`);
         }
       } else {
         // If merchant already has a different category, remove it first
-        if (merchantCategories[merchantName] && merchantCategories[merchantName] !== categoryId) {
+        if (merchantCategories[merchantName] && merchantCategories[merchantName] !== parseInt(categoryId)) {
           await removeMerchantCategory(merchantName, merchantCategories[merchantName]);
         }
         
         // Add the new category
         await addMerchantCategory(merchantName, categoryId);
         
-        // Update local state
+        // Update local state immediately
         setMerchantCategories(prev => ({
           ...prev,
           [merchantName]: parseInt(categoryId)
         }));
+        
+        // Clear the cache for this merchant
+        const cacheKey = `merchant_category_${merchantName}`;
+        sessionStorage.removeItem(cacheKey);
+        sessionStorage.removeItem(`${cacheKey}_timestamp`);
       }
     } catch (err) {
       console.error('Error updating merchant category:', err);
@@ -288,6 +328,22 @@ const MerchantCategoryManager = () => {
         </button>
       </div>
       
+      {categoryLoading && (
+        <div className="category-loading-indicator">
+          <div className="loading-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${loadingProgress}%` }}
+              ></div>
+            </div>
+            <div className="progress-text">
+              Loading merchant categories... {loadingProgress}%
+            </div>
+          </div>
+        </div>
+      )}
+      
       {showAddCategoryForm && (
         <div className="add-category-form">
           <h3>Create New Category</h3>
@@ -408,6 +464,7 @@ const MerchantCategoryManager = () => {
             {currentMerchants.map(merchant => {
               const categoryId = merchantCategories[merchant.merchant_name];
               const category = categoryId ? getCategoryById(categoryId) : null;
+              const isLoaded = loadedMerchants.has(merchant.merchant_name);
               
               return (
                 <tr key={merchant.merchant_name}>
@@ -417,22 +474,28 @@ const MerchantCategoryManager = () => {
                   <td>{new Date(merchant.last_transaction).toLocaleDateString()}</td>
                   <td>
                     <div className="category-select-container">
-                      <select
-                        value={categoryId || "none"}
-                        onChange={(e) => handleCategoryChange(merchant.merchant_name, e.target.value)}
-                        className={`category-select-tag ${categoryId ? 'has-category' : 'no-category'}`}
-                        style={category ? {
-                          backgroundColor: category.color,
-                          color: '#fff'
-                        } : {}}
-                      >
-                        <option value="none">None</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.icon} {cat.name}
-                          </option>
-                        ))}
-                      </select>
+                      {isLoaded ? (
+                        <select
+                          value={categoryId || "none"}
+                          onChange={(e) => handleCategoryChange(merchant.merchant_name, e.target.value)}
+                          className={`category-select-tag ${categoryId ? 'has-category' : 'no-category'}`}
+                          style={category ? {
+                            backgroundColor: category.color,
+                            color: '#fff'
+                          } : {}}
+                        >
+                          <option value="none">None</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.icon} {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="category-loading">
+                          <span className="loading-placeholder">Loading...</span>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>
