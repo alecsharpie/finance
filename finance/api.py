@@ -35,6 +35,100 @@ if not os.path.exists(data_dir):
 db_path = os.path.join(data_dir, "finance-prod.db")
 db = FinanceDB(db_path)
 
+# Add this function near the top of the file, after initializing the database
+def ensure_tables_exist():
+    """Ensure all required tables exist in the database."""
+    try:
+        # Check if categories table exists
+        check_query = """
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='categories';
+        """
+        check_df = db.run_query_pandas(check_query)
+        
+        if check_df.empty:
+            # Create categories table if it doesn't exist
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                color TEXT,
+                icon TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+            db.run_query(create_table_query)
+            
+            # Create merchant_categories table for the many-to-many relationship
+            create_mapping_table_query = """
+            CREATE TABLE IF NOT EXISTS merchant_categories (
+                id INTEGER PRIMARY KEY,
+                merchant_name TEXT NOT NULL,
+                category_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES categories (id),
+                UNIQUE(merchant_name, category_id)
+            );
+            """
+            db.run_query(create_mapping_table_query)
+            
+            # Add some default categories
+            default_categories = [
+                ("Food & Dining", "#FF5733", "🍔"),
+                ("Shopping", "#33FF57", "🛍️"),
+                ("Transportation", "#3357FF", "🚗"),
+                ("Entertainment", "#F033FF", "🎬"),
+                ("Utilities", "#FF33A8", "💡"),
+                ("Housing", "#33FFF5", "🏠"),
+                ("Travel", "#F5FF33", "✈️"),
+                ("Health", "#FF3333", "🏥"),
+                ("Education", "#33FFBD", "📚"),
+                ("Personal", "#BD33FF", "👤")
+            ]
+            
+            insert_query = """
+            INSERT INTO categories (name, color, icon)
+            VALUES (?, ?, ?);
+            """
+            
+            with db._get_connection() as conn:
+                cursor = conn.cursor()
+                for category in default_categories:
+                    try:
+                        cursor.execute(insert_query, category)
+                    except Exception as e:
+                        print(f"Error inserting category {category}: {e}")
+                conn.commit()
+        else:
+            # Check if merchant_categories table exists
+            check_mc_query = """
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='merchant_categories';
+            """
+            check_mc_df = db.run_query_pandas(check_mc_query)
+            
+            if check_mc_df.empty:
+                # Create merchant_categories table if it doesn't exist
+                create_mapping_table_query = """
+                CREATE TABLE IF NOT EXISTS merchant_categories (
+                    id INTEGER PRIMARY KEY,
+                    merchant_name TEXT NOT NULL,
+                    category_id INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (category_id) REFERENCES categories (id),
+                    UNIQUE(merchant_name, category_id)
+                );
+                """
+                db.run_query(create_mapping_table_query)
+    except Exception as e:
+        print(f"Error ensuring tables exist: {e}")
+        import traceback
+        traceback.print_exc()
+
+# Call this function right after initializing the database
+db = FinanceDB(db_path)
+ensure_tables_exist()
+
 @app.get("/")
 def read_root():
     return {"message": "Finance Dashboard API is running"}
@@ -603,6 +697,9 @@ def get_transaction_timeline_with_categories(
 ):
     """Get transaction timeline data with category breakdown."""
     try:
+        # Ensure tables exist
+        ensure_tables_exist()
+        
         # Base query to get all transactions in the date range with their categories
         query = """
         SELECT 
@@ -633,7 +730,7 @@ def get_transaction_timeline_with_categories(
             return {}
             
         # Convert amounts to float and ensure negative values for expenses
-        df['amount'] = df['amount'].apply(lambda x: float(str(x).replace('+', '').replace('-', '-')))
+        df['amount'] = df['amount'].apply(lambda x: float(str(x).replace('+', '')) if pd.notna(x) else 0)
         
         # Group by period based on view_mode
         if view_mode == 'yearly':
@@ -751,6 +848,22 @@ def get_raw_transactions(
         
         df = db.run_query_pandas(query, (limit, offset))
         
+        # Convert amount to numeric
+        def convert_amount(x):
+            if pd.isna(x):
+                return 0
+            try:
+                # Handle both string and numeric values
+                if isinstance(x, str):
+                    # Remove any non-numeric characters except for - and .
+                    x = ''.join(c for c in x if c.isdigit() or c in '.-')
+                    return float(x)
+                return float(x)
+            except:
+                return 0
+                
+        df['amount'] = df['amount'].apply(convert_amount)
+        
         # Get total count for pagination
         count_query = "SELECT COUNT(*) as total FROM transactions"
         count_df = db.run_query_pandas(count_query)
@@ -765,6 +878,8 @@ def get_raw_transactions(
             }
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to fetch raw transactions: {str(e)}")
 
 @app.post("/transactions/upload/commbank")

@@ -2,17 +2,32 @@ import requests
 import json
 from typing import Dict
 
-import json
-
 def is_valid_json(response: str) -> bool:
     """Check if the response is a valid JSON string."""
     try:
-        json.loads(response)
-        return True
+        # First try to extract JSON from markdown code blocks if present
+        if "```json" in response and "```" in response.split("```json", 1)[1]:
+            json_content = response.split("```json", 1)[1].split("```", 1)[0].strip()
+            json.loads(json_content)
+            return True
+        # If no code blocks or extraction failed, try parsing the whole response
+        else:
+            json.loads(response)
+            return True
     except ValueError:
         return False
 
-def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
+def parse_json_response(response):
+    """Parse JSON from LLM response, handling markdown code blocks."""
+    if "```json" in response and "```" in response.split("```json", 1)[1]:
+        # Extract JSON from markdown code blocks
+        json_content = response.split("```json", 1)[1].split("```", 1)[0].strip()
+        return json.loads(json_content)
+    else:
+        # Try parsing the whole response
+        return json.loads(response)
+
+def query_ollama(prompt: str, model: str = "gemma3") -> Dict:
     """Send a query to Ollama and return the parsed response."""
     url = "http://localhost:11434/api/generate"
     payload = {
@@ -29,7 +44,4 @@ def query_ollama(prompt: str, model: str = "gemma2:9b") -> Dict:
     except Exception as e:
         print(f"Error querying Ollama: {str(e)}")
         return {}
-    
-def parse_json_response(response):
-    return json.loads(response.replace('```json\n', '').replace('\n```', ''))
 

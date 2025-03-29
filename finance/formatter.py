@@ -29,6 +29,14 @@ class FinanceFormatter:
         """Format number as currency."""
         if pd.isna(value):
             return '$0.00'
+        
+        # Handle string values that might have + or - prefixes
+        if isinstance(value, str):
+            try:
+                value = float(value.replace('+', ''))
+            except ValueError:
+                return '$0.00'
+            
         return f'${abs(value):,.2f}'
 
     @staticmethod

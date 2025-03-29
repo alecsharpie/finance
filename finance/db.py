@@ -82,16 +82,43 @@ class FinanceDB:
             conn.commit()
     
     def insert_transaction(self, transaction_data: Dict[str, Any], hash_value: str):
-        if not self.transaction_exists(hash_value):
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                INSERT INTO transactions (date, amount, balance, original_description, merchant_name, transaction_type, location, currency, last_4_card_number, hash, source)
-                VALUES (:date, :amount, :balance, :original_description, :merchant_name, :transaction_type, :location, :currency, :last_4_card_number, :hash, :source)
-                ''', transaction_data)
-                conn.commit()
-        else:
-            logger.info("Transaction already exists in the database.")
+        """Insert a transaction into the database with better error handling."""
+        try:
+            if not self.transaction_exists(hash_value):
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    # Create a query with named parameters for all fields
+                    query = '''
+                    INSERT INTO transactions (
+                        date, amount, balance, original_description, 
+                        merchant_name, transaction_type, location, 
+                        currency, last_4_card_number, hash, source
+                    ) VALUES (
+                        :date, :amount, :balance, :original_description,
+                        :merchant_name, :transaction_type, :location,
+                        :currency, :last_4_card_number, :hash, :source
+                    )
+                    '''
+                    
+                    # Execute the query with proper error handling
+                    try:
+                        cursor.execute(query, transaction_data)
+                        conn.commit()
+                        return True
+                    except sqlite3.Error as e:
+                        conn.rollback()
+                        logger.error(f"SQLite error: {e}")
+                        logger.error(f"Failed transaction data: {transaction_data}")
+                        return False
+            else:
+                logger.info(f"Transaction already exists in the database (hash: {hash_value}).")
+                return False
+        except Exception as e:
+            logger.error(f"Error in insert_transaction: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
     
     def transaction_exists(self, hash_value: str) -> bool:
         with self._get_connection() as conn:
