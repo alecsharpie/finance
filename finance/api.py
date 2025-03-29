@@ -720,6 +720,7 @@ def get_transaction_timeline_with_categories(
             categories c ON mc.category_id = c.id
         WHERE 
             t.date BETWEEN ? AND ?
+            AND t.amount < 0  -- Only include spending (negative amounts)
         ORDER BY 
             t.date
         """
@@ -906,7 +907,7 @@ async def upload_commbank_transactions(
             process_commbank_transactions_file,
             temp_file_path,
             db_path,
-            model="gemma2:2b"
+            model="gemma3"
         )
         
         # Return success response with estimated processing time

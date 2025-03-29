@@ -297,19 +297,22 @@ const FinancialCalendar = () => {
       // Get all transactions from the new data structure
       const allTransactions = dayData.transactions || [];
       
-      console.log("All transactions:", allTransactions); // Debug log
+      // Filter to only include spending (negative amounts)
+      const spendingTransactions = allTransactions.filter(tx => parseFloat(tx.amount) < 0);
       
-      if (allTransactions.length === 0) {
+      console.log("Spending transactions:", spendingTransactions); // Debug log
+      
+      if (spendingTransactions.length === 0) {
         return (
           <div className="no-data-message">
-            <p>No transaction details available for {new Date(drillDownPeriod).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}.</p>
-            <p>The day has summary data but no individual transactions.</p>
+            <p>No spending transactions available for {new Date(drillDownPeriod).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}.</p>
+            <p>The day has summary data but no individual spending transactions.</p>
           </div>
         );
       }
       
       // Sort transactions by time (if available) or just group by hour
-      allTransactions.sort((a, b) => {
+      spendingTransactions.sort((a, b) => {
         const timeA = a.time ? new Date(`${drillDownPeriod}T${a.time}`) : new Date(drillDownPeriod);
         const timeB = b.time ? new Date(`${drillDownPeriod}T${b.time}`) : new Date(drillDownPeriod);
         return timeA - timeB;
@@ -317,7 +320,7 @@ const FinancialCalendar = () => {
       
       // Group transactions by hour
       const transactionsByHour = {};
-      allTransactions.forEach(tx => {
+      spendingTransactions.forEach(tx => {
         // Default to midnight if no time is provided
         const hour = tx.time ? parseInt(tx.time.split(':')[0]) : 0;
         const hourKey = hour.toString();
@@ -444,8 +447,12 @@ const FinancialCalendar = () => {
     Object.entries(timelineData).forEach(([period, data]) => {
       // Skip the current period for the average calculation
       if (period !== currentPeriod && data.categories && data.categories[categoryName]) {
-        totalSpend += Math.abs(data.categories[categoryName].amount || 0);
-        periodCount++;
+        // Only include negative amounts (spending)
+        const amount = data.categories[categoryName].amount || 0;
+        if (amount < 0) {
+          totalSpend += Math.abs(amount);
+          periodCount++;
+        }
       }
     });
     
@@ -463,9 +470,15 @@ const FinancialCalendar = () => {
     
     Object.entries(timelineData).forEach(([period, data]) => {
       if (period !== currentPeriod) {
-        const totalAmount = Math.abs(data.total || 0);
+        // Only include negative amounts (spending)
+        const totalAmount = data.total < 0 ? Math.abs(data.total || 0) : 0;
+        
+        // Calculate categorized total (only negative amounts)
         const categorizedTotal = Object.values(data.categories || {}).reduce(
-          (sum, cat) => sum + Math.abs(cat.amount || 0), 0
+          (sum, cat) => {
+            const catAmount = cat.amount || 0;
+            return sum + (catAmount < 0 ? Math.abs(catAmount) : 0);
+          }, 0
         );
         
         const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
@@ -645,32 +658,45 @@ const FinancialCalendar = () => {
                 
                 // Combine all transactions regardless of recurring status
                 const allTransactions = [...(data.transactions || [])];
-                const totalAmount = Math.abs(data.total || 0);
+                
+                // Filter to only include spending (negative amounts)
+                const spendingTransactions = allTransactions.filter(tx => 
+                  parseFloat(tx.amount) < 0
+                );
+                
+                // Calculate total spending (negative amounts only)
+                const totalSpending = Math.abs(spendingTransactions.reduce(
+                  (sum, tx) => sum + parseFloat(tx.amount), 0
+                ));
                 
                 // Process all categories together
                 const allCategories = {};
                 
                 // First, add existing categories
                 Object.entries(data.categories || {}).forEach(([name, categoryData]) => {
-                  if (!allCategories[name]) {
-                    allCategories[name] = { 
-                      ...categoryData, 
-                      total: Math.abs(categoryData.amount || 0),
-                      // Calculate average based on view mode
-                      average: calculateCategoryAverage(name, viewMode, period)
-                    };
+                  // Only include categories with negative amounts (spending)
+                  const catAmount = categoryData.amount || 0;
+                  if (catAmount < 0) {
+                    if (!allCategories[name]) {
+                      allCategories[name] = { 
+                        ...categoryData, 
+                        total: Math.abs(catAmount),
+                        // Calculate average based on view mode
+                        average: calculateCategoryAverage(name, viewMode, period)
+                      };
+                    }
                   }
                 });
                 
-                // Calculate total amount in categorized transactions
+                // Calculate total amount in categorized spending transactions
                 const categorizedTotal = Object.values(allCategories).reduce((sum, cat) => sum + cat.total, 0);
                 
-                // If there's a difference between total amount and categorized total, add an Uncategorized category
-                const uncategorizedAmount = Math.max(0, totalAmount - categorizedTotal);
+                // If there's a difference between total spending and categorized total, add an Uncategorized category
+                const uncategorizedAmount = Math.max(0, totalSpending - categorizedTotal);
                 if (uncategorizedAmount > 0) {
                   allCategories['Uncategorized'] = {
                     total: uncategorizedAmount,
-                    count: allTransactions.length - Object.values(allCategories).reduce((sum, cat) => sum + (cat.count || 0), 0),
+                    count: spendingTransactions.length - Object.values(allCategories).reduce((sum, cat) => sum + (cat.count || 0), 0),
                     color: '#CCCCCC',
                     icon: '❓',
                     // Calculate average for uncategorized as well
@@ -692,7 +718,7 @@ const FinancialCalendar = () => {
                     </div>
                     
                     <div className="amount-display">
-                      <div className="total-amount">{formatCurrency(totalAmount)}</div>
+                      <div className="total-amount">{formatCurrency(totalSpending)}</div>
                     </div>
                     
                     <div className="spending-bars-container">
