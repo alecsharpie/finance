@@ -313,4 +313,14 @@ export const getMerchantCategoryFromCacheOrBatch = (merchantName, batchResults) 
   }
   
   return batchResults[merchantName] || [];
+};
+
+export const updateCategory = async (categoryId, categoryData) => {
+  try {
+    const response = await axios.put(`${API_BASE_URL}/categories/${categoryId}`, categoryData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating category:', error);
+    throw error;
+  }
 }; 

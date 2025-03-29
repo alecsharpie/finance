@@ -250,42 +250,23 @@ def process_commbank_transactions_file(file_path, db_path, model="gemma3"):
                     skipped_rows += 1
                     continue
                 
-                # Check if this is a simple amount description
-                if is_simple_amount(description):
-                    logger.debug(f"Simple amount description detected: {description}")
-                    parsed_data = handle_simple_amount(description)
-                    logger.debug(f"Parsed simple amount: {parsed_data}")
-                else:
-                    # Create prompt for LLM
-                    logger.debug(f"Creating LLM prompt for description: {description}")
-                    prompt = create_commbank_prompt(description)
-                    
+                # Create prompt for LLM
+                logger.debug(f"Creating LLM prompt for description: {description}")
+                prompt = create_commbank_prompt(description)
                     # Query LLM with retry
-                    try:
-                        logger.debug(f"Querying LLM for description: {description}")
-                        response = query_ollama_with_retry(prompt, model=model)
-                        logger.debug(f"LLM response received: {response[:100]}...")
-                        
-                        # Parse response
-                        if is_valid_json(response):
-                            parsed_data = parse_json_response(response)
-                            logger.debug(f"Successfully parsed JSON response: {parsed_data}")
-                        else:
-                            logger.warning(f"Failed to parse JSON response for transaction: {description}")
-                            logger.warning(f"Raw response: {response}")
-                            # Use a default parsing for failed responses
-                            parsed_data = {
-                                "merchant_name": description[:50] if description else "Unknown",
-                                "transaction_type": "Unknown",
-                                "location": None,
-                                "currency": None,
-                                "last_4_card_number": None,
-                                "date": None
-                            }
-                            logger.debug(f"Using default parsing: {parsed_data}")
-                    except Exception as e:
-                        logger.error(f"Error querying LLM for '{description}': {e}")
-                        # Use a default parsing for exceptions
+                try:
+                    logger.debug(f"Querying LLM for description: {description}")
+                    response = query_ollama_with_retry(prompt, model=model)
+                    logger.debug(f"LLM response received: {response[:100]}...")
+                    
+                    # Parse response
+                    if is_valid_json(response):
+                        parsed_data = parse_json_response(response)
+                        logger.debug(f"Successfully parsed JSON response: {parsed_data}")
+                    else:
+                        logger.warning(f"Failed to parse JSON response for transaction: {description}")
+                        logger.warning(f"Raw response: {response}")
+                        # Use a default parsing for failed responses
                         parsed_data = {
                             "merchant_name": description[:50] if description else "Unknown",
                             "transaction_type": "Unknown",
@@ -294,8 +275,20 @@ def process_commbank_transactions_file(file_path, db_path, model="gemma3"):
                             "last_4_card_number": None,
                             "date": None
                         }
-                        logger.debug(f"Using default parsing due to error: {parsed_data}")
-                
+                        logger.debug(f"Using default parsing: {parsed_data}")
+                except Exception as e:
+                    logger.error(f"Error querying LLM for '{description}': {e}")
+                    # Use a default parsing for exceptions
+                    parsed_data = {
+                        "merchant_name": description[:50] if description else "Unknown",
+                        "transaction_type": "Unknown",
+                        "location": None,
+                        "currency": None,
+                        "last_4_card_number": None,
+                        "date": None
+                    }
+                    logger.debug(f"Using default parsing due to error: {parsed_data}")
+            
                 # Always use the date from the CSV file, not from the description
                 # Create transaction data dictionary
                 transaction_data = {

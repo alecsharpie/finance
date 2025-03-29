@@ -968,6 +968,52 @@ def get_merchant_categories_batch(merchant_names: List[str]):
         print(f"ERROR in get_merchant_categories_batch: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch merchant categories batch: {str(e)}")
 
+@app.put("/categories/{category_id}")
+def update_category(category_id: int, category_data: dict):
+    """Update an existing category."""
+    try:
+        # Validate the input data
+        if not all(key in category_data for key in ['name', 'color', 'icon']):
+            raise HTTPException(status_code=400, detail="Missing required fields: name, color, and icon are required")
+        
+        # Update the category in the database
+        query = """
+        UPDATE categories 
+        SET name = :name, color = :color, icon = :icon
+        WHERE id = :id;
+        """
+        
+        params = {
+            "id": category_id,
+            "name": category_data["name"],
+            "color": category_data["color"],
+            "icon": category_data["icon"]
+        }
+        
+        with db._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail=f"Category with ID {category_id} not found")
+                
+            conn.commit()
+            
+        # Return the updated category
+        return {
+            "id": category_id,
+            "name": category_data["name"],
+            "color": category_data["color"],
+            "icon": category_data["icon"]
+        }
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        print(f"ERROR in update_category: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update category: {str(e)}")
+
 # Run with: uvicorn main:app --reload --port 3001
 if __name__ == "__main__":
     import uvicorn

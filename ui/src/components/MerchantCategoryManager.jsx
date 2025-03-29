@@ -8,7 +8,8 @@ import {
   addMerchantCategory,
   removeMerchantCategory,
   fetchMerchantCategoriesBatch,
-  getMerchantCategoryFromCacheOrBatch
+  getMerchantCategoryFromCacheOrBatch,
+  updateCategory
 } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 
@@ -28,6 +29,10 @@ const MerchantCategoryManager = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadedMerchants, setLoadedMerchants] = useState(new Set());
+  const [sortField, setSortField] = useState('total_spent');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editedCategory, setEditedCategory] = useState({ name: '', color: '', icon: '' });
   
   // Load merchants and categories on component mount or refresh
   useEffect(() => {
@@ -308,6 +313,90 @@ const MerchantCategoryManager = () => {
     );
   };
   
+  // Sort merchants based on the selected field and direction
+  const sortMerchants = (merchants) => {
+    return [...merchants].sort((a, b) => {
+      let valueA, valueB;
+      
+      if (sortField === 'merchant_name') {
+        valueA = a.merchant_name.toLowerCase();
+        valueB = b.merchant_name.toLowerCase();
+      } else if (sortField === 'transaction_count') {
+        valueA = a.transaction_count;
+        valueB = b.transaction_count;
+      } else if (sortField === 'total_spent') {
+        valueA = a.total_spent;
+        valueB = b.total_spent;
+      } else if (sortField === 'last_transaction') {
+        valueA = new Date(a.last_transaction);
+        valueB = new Date(b.last_transaction);
+      }
+      
+      if (sortDirection === 'asc') {
+        return valueA > valueB ? 1 : -1;
+      } else {
+        return valueA < valueB ? 1 : -1;
+      }
+    });
+  };
+  
+  // Apply sorting to the filtered merchants
+  const sortedMerchants = sortMerchants(filteredMerchants);
+  
+  // Get current page of merchants after sorting
+  const currentMerchantsAfterSorting = sortedMerchants.slice(indexOfFirstMerchant, indexOfLastMerchant);
+  
+  // Handle sort change
+  const handleSortChange = (e) => {
+    setSortField(e.target.value);
+  };
+  
+  // Toggle sort direction
+  const toggleSortDirection = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+  
+  // Handle editing a category
+  const handleEditCategory = (category) => {
+    setEditingCategory(category.id);
+    setEditedCategory({
+      name: category.name,
+      color: category.color,
+      icon: category.icon
+    });
+  };
+  
+  // Handle saving category edits
+  const handleSaveEdit = async () => {
+    try {
+      // Call API to update the category
+      await updateCategory(editingCategory, editedCategory);
+      
+      // Update local state
+      setCategories(categories.map(cat => 
+        cat.id === editingCategory 
+          ? { ...cat, ...editedCategory } 
+          : cat
+      ));
+      
+      // Reset editing state
+      setEditingCategory(null);
+      setEditedCategory({ name: '', color: '', icon: '' });
+      
+      // Refresh data to ensure everything is up to date
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error("Error updating category:", err);
+      alert("Failed to update category");
+    }
+  };
+  
+  // Handle canceling category edits
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setEditedCategory({ name: '', color: '', icon: '' });
+  };
+  
   if (loading) {
     return <div className="loading">Loading merchant and category data...</div>;
   }
@@ -320,12 +409,6 @@ const MerchantCategoryManager = () => {
     <div className="category-management">
       <div className="category-header">
         <h2>Merchant Category Management</h2>
-        <button 
-          className="btn btn-primary"
-          onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}
-        >
-          {showAddCategoryForm ? 'Cancel' : 'Add New Category'}
-        </button>
       </div>
       
       {categoryLoading && (
@@ -390,121 +473,218 @@ const MerchantCategoryManager = () => {
         </div>
       )}
       
-      <div className="categories-list">
-        <h3>Available Categories</h3>
+      <div className="categories-section">
+        <div className="categories-header">
+          <h3 className="section-title">Available Categories</h3>
+          <button 
+            className="btn-add-category"
+            onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}
+          >
+            {showAddCategoryForm ? 'Cancel' : '+ Add Category'}
+          </button>
+        </div>
         <div className="categories-grid">
           {categories.map(category => (
             <div key={category.id} className="category-item">
-              <div className="category-info">
-                <span className="category-icon" style={{backgroundColor: category.color}}>
-                  {category.icon}
-                </span>
-                <span className="category-name">{category.name}</span>
-              </div>
-              <button 
-                className="btn-icon delete"
-                onClick={() => handleDeleteCategory(category.id)}
-                title="Delete category"
-              >
-                ×
-              </button>
+              {editingCategory === category.id ? (
+                // Edit mode
+                <div className="category-edit-form">
+                  <div className="edit-inputs">
+                    <input
+                      type="color"
+                      value={editedCategory.color}
+                      onChange={(e) => setEditedCategory({...editedCategory, color: e.target.value})}
+                      className="color-input"
+                      title="Change category color"
+                    />
+                    <input
+                      type="text"
+                      value={editedCategory.icon}
+                      onChange={(e) => setEditedCategory({...editedCategory, icon: e.target.value})}
+                      className="icon-input"
+                      placeholder="Emoji"
+                      maxLength="2"
+                    />
+                    <input
+                      type="text"
+                      value={editedCategory.name}
+                      onChange={(e) => setEditedCategory({...editedCategory, name: e.target.value})}
+                      className="name-input"
+                      placeholder="Category name"
+                    />
+                  </div>
+                  <div className="edit-actions">
+                    <button 
+                      onClick={handleSaveEdit}
+                      className="btn-icon save"
+                      title="Save changes"
+                    >
+                      ✓
+                    </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      className="btn-icon cancel"
+                      title="Cancel"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // View mode
+                <>
+                  <div className="category-info">
+                    <span className="category-icon" style={{backgroundColor: category.color}}>
+                      {category.icon}
+                    </span>
+                    <span className="category-name">{category.name}</span>
+                  </div>
+                  <div className="category-actions">
+                    <button 
+                      className="btn-icon edit"
+                      onClick={() => handleEditCategory(category)}
+                      title="Edit category"
+                    >
+                      ✎
+                    </button>
+                    <button 
+                      className="btn-icon delete"
+                      onClick={() => handleDeleteCategory(category.id)}
+                      title="Delete category"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
       </div>
       
-      <div className="filter-controls">
-        <div className="search-bar">
-          <input 
-            type="text"
-            placeholder="Search merchants..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page on search
-            }}
-          />
-          <button onClick={() => setSearchTerm('')}>Clear</button>
+      <div className="merchants-section">
+        <h3 className="section-title">Merchant Management</h3>
+        
+        <div className="merchant-controls">
+          <div className="merchant-filters">
+            <div className="search-bar">
+              <input 
+                type="text"
+                placeholder="Search merchants..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+              />
+              <button onClick={() => setSearchTerm('')}>Clear</button>
+            </div>
+            
+            <div className="category-filter">
+              <label htmlFor="category-filter" className="filter-label">Category:</label>
+              <select 
+                id="category-filter"
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+                className="filter-select"
+              >
+                <option value="all">All Categories</option>
+                <option value="uncategorized">Uncategorized</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="merchant-sort">
+            <span className="sort-label">Sort by:</span>
+            <select 
+              value={sortField}
+              onChange={handleSortChange}
+              className="sort-select"
+            >
+              <option value="merchant_name">Merchant Name</option>
+              <option value="transaction_count">Transaction Count</option>
+              <option value="total_spent">Total Spent</option>
+              <option value="last_transaction">Last Transaction</option>
+            </select>
+            <button 
+              onClick={toggleSortDirection}
+              className="sort-direction-btn"
+              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
         </div>
         
-        <div className="category-filter">
-          <label htmlFor="category-filter">Filter by category:</label>
-          <select 
-            id="category-filter"
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1); // Reset to first page on filter change
-            }}
-            className="category-select"
-          >
-            <option value="all">All Categories</option>
-            <option value="uncategorized">Uncategorized</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.name}
-              </option>
-            ))}
-          </select>
+        <div className="merchant-stats">
+          Showing {filteredMerchants.length} merchants ({merchants.length} total)
         </div>
-      </div>
-      
-      <div className="merchants-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Merchant</th>
-              <th>Transaction Count</th>
-              <th>Total Spent</th>
-              <th>Last Transaction</th>
-              <th>Category</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentMerchants.map(merchant => {
-              const categoryId = merchantCategories[merchant.merchant_name];
-              const category = categoryId ? getCategoryById(categoryId) : null;
-              const isLoaded = loadedMerchants.has(merchant.merchant_name);
-              
-              return (
-                <tr key={merchant.merchant_name}>
-                  <td>{merchant.merchant_name}</td>
-                  <td>{merchant.transaction_count}</td>
-                  <td>{formatCurrency(merchant.total_spent)}</td>
-                  <td>{new Date(merchant.last_transaction).toLocaleDateString()}</td>
-                  <td>
-                    <div className="category-select-container">
-                      {isLoaded ? (
-                        <select
-                          value={categoryId || "none"}
-                          onChange={(e) => handleCategoryChange(merchant.merchant_name, e.target.value)}
-                          className={`category-select-tag ${categoryId ? 'has-category' : 'no-category'}`}
-                          style={category ? {
-                            backgroundColor: category.color,
-                            color: '#fff'
-                          } : {}}
-                        >
-                          <option value="none">None</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.icon} {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="category-loading">
-                          <span className="loading-placeholder">Loading...</span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
         
-        {renderPagination()}
+        <div className="merchants-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Merchant</th>
+                <th>Transaction Count</th>
+                <th>Total Spent</th>
+                <th>Last Transaction</th>
+                <th>Category</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentMerchantsAfterSorting.map(merchant => {
+                const categoryId = merchantCategories[merchant.merchant_name];
+                const category = categoryId ? getCategoryById(categoryId) : null;
+                const isLoaded = loadedMerchants.has(merchant.merchant_name);
+                
+                return (
+                  <tr key={merchant.merchant_name}>
+                    <td>{merchant.merchant_name}</td>
+                    <td>{merchant.transaction_count}</td>
+                    <td>{formatCurrency(merchant.total_spent)}</td>
+                    <td>{new Date(merchant.last_transaction).toLocaleDateString()}</td>
+                    <td>
+                      <div className="category-select-container">
+                        {isLoaded ? (
+                          <select
+                            value={categoryId || "none"}
+                            onChange={(e) => handleCategoryChange(merchant.merchant_name, e.target.value)}
+                            className={`category-select-tag ${categoryId ? 'has-category' : 'no-category'}`}
+                            style={category ? {
+                              backgroundColor: category.color,
+                              color: '#fff'
+                            } : {}}
+                          >
+                            <option value="none">None</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.icon} {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="category-loading">
+                            <span className="loading-placeholder">Loading...</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          
+          {renderPagination()}
+        </div>
       </div>
     </div>
   );
