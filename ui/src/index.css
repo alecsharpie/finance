@@ -1651,6 +1651,8 @@ h2, h3 {
 .category-select-container {
   position: relative;
   display: inline-block;
+  min-width: 180px;
+  max-width: 100%;
 }
 
 .category-select-tag {
@@ -1666,9 +1668,14 @@ h2, h3 {
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   background-size: 1em;
-  min-width: 150px;
+  min-width: 180px;
+  max-width: 100%;
+  width: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .category-select-tag:focus {
@@ -1694,6 +1701,9 @@ h2, h3 {
   background-color: white;
   color: var(--text);
   font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 768px) {

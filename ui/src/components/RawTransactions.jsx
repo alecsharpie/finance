@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRawTransactions, fetchCategories, fetchMerchantCategories, uploadCommbankTransactions, fetchMerchantCategoriesBatch, getMerchantCategoryFromCacheOrBatch } from '../services/api';
+import { fetchRawTransactions, fetchCategories, fetchMerchantCategories, uploadCommbankTransactions, fetchMerchantCategoriesBatch, getMerchantCategoryFromCacheOrBatch, uploadWestpacTransactions, fetchUpBankTransactions } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 const RawTransactions = () => {
@@ -37,6 +37,12 @@ const RawTransactions = () => {
   // Add these state variables for progress tracking
   const [uploadProgress, setUploadProgress] = useState(0);
   const [progressInterval, setProgressInterval] = useState(null);
+
+  // Add new state for the enhanced upload modal
+  const [showUploadOptions, setShowUploadOptions] = useState(false);
+  const [selectedUploadType, setSelectedUploadType] = useState(null);
+  const [upBankApiKey, setUpBankApiKey] = useState('');
+  const [upBankStatus, setUpBankStatus] = useState(null);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -282,20 +288,20 @@ const RawTransactions = () => {
     document.body.removeChild(link);
   };
 
-  // Modify the handleFileUpload function to include progress simulation
-  const handleFileUpload = async (event) => {
+  // Modified function to handle file upload based on bank type
+  const handleFileUpload = async (event, bankType) => {
     const file = event.target.files[0];
     if (!file) return;
     
     try {
       setIsUploading(true);
-      setUploadStatus({ type: 'info', message: 'Uploading file...' });
+      setUploadStatus({ type: 'info', message: `Uploading ${bankType} file...` });
       setUploadProgress(0);
       
       // Start simulated progress
       const interval = setInterval(() => {
         setUploadProgress(prev => {
-          // Slowly increase progress up to 90% (the last 10% will be completed when the server responds)
+          // Slowly increase progress up to 90%
           if (prev < 90) {
             return prev + (Math.random() * 2);
           }
@@ -305,7 +311,13 @@ const RawTransactions = () => {
       
       setProgressInterval(interval);
       
-      const result = await uploadCommbankTransactions(file);
+      // Call the appropriate API endpoint based on bank type
+      let result;
+      if (bankType === 'commbank') {
+        result = await uploadCommbankTransactions(file);
+      } else if (bankType === 'westpac') {
+        result = await uploadWestpacTransactions(file);
+      }
       
       // Complete the progress
       clearInterval(interval);
@@ -313,7 +325,7 @@ const RawTransactions = () => {
       
       setUploadStatus({ 
         type: 'success', 
-        message: 'File uploaded successfully! Processing has started in the background. Refresh the page in a few minutes to see new transactions.' 
+        message: `${bankType.toUpperCase()} file uploaded successfully! Processing has started in the background. Refresh the page in a few minutes to see new transactions.` 
       });
       
       // Reset the file input
@@ -342,84 +354,310 @@ const RawTransactions = () => {
     }
   };
 
-  // Update the closeUploadModal function to clear the interval
-  const closeUploadModal = () => {
+  // New function to handle Up Bank API connection
+  const handleUpBankConnect = async () => {
+    if (!upBankApiKey.trim()) {
+      setUpBankStatus({
+        type: 'error',
+        message: 'Please enter an API key'
+      });
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      setUpBankStatus({ type: 'info', message: 'Connecting to Up Bank API...' });
+      setUploadProgress(10);
+      
+      // Simulate API connection progress
+      const interval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev < 90) {
+            return prev + (Math.random() * 5);
+          }
+          return prev;
+        });
+      }, 300);
+      
+      setProgressInterval(interval);
+      
+      // Call the Up Bank API endpoint
+      const result = await fetchUpBankTransactions(upBankApiKey);
+      
+      // Complete the progress
+      clearInterval(interval);
+      setUploadProgress(100);
+      
+      setUpBankStatus({ 
+        type: 'success', 
+        message: 'Successfully connected to Up Bank! Transactions are being imported in the background. Refresh the page in a few minutes to see new transactions.' 
+      });
+      
+      // Reset progress after a delay
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 3000);
+      
+    } catch (err) {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        setProgressInterval(null);
+      }
+      
+      setUploadProgress(0);
+      console.error('Up Bank connection failed:', err);
+      setUpBankStatus({ 
+        type: 'error', 
+        message: `Connection failed: ${err.response?.data?.detail || err.message}` 
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Close all upload modals
+  const closeUploadModals = () => {
     if (progressInterval) {
       clearInterval(progressInterval);
       setProgressInterval(null);
     }
     setUploadProgress(0);
     setShowUploadModal(false);
-    // Clear status after a delay when closing
-    setTimeout(() => setUploadStatus(null), 300);
+    setShowUploadOptions(false);
+    setSelectedUploadType(null);
+    setUpBankStatus(null);
+    setUploadStatus(null);
   };
 
-  // Update the UploadModal component to include the progress bar
-  const UploadModal = () => {
-    if (!showUploadModal) return null;
+  // Update the UploadModal component to include all options
+  const UploadOptionsModal = () => {
+    if (!showUploadOptions) return null;
     
     return (
       <div className="upload-modal-overlay">
         <div className="upload-modal">
           <div className="upload-modal-header">
-            <h3>Upload Commonwealth Bank Transactions</h3>
-            <button className="close-button" onClick={closeUploadModal}>×</button>
+            <h3>Import Transactions</h3>
+            <button className="close-button" onClick={closeUploadModals}>×</button>
           </div>
           
           <div className="upload-modal-content">
             <p>
-              Upload a CSV file exported from Commonwealth Bank to add transactions to your database.
-              The file will be processed using a local LLM (Gemma2) to extract transaction details.
+              Choose your bank to import transactions into your database.
             </p>
             
-            <div className="upload-instructions">
-              <h4>Instructions:</h4>
-              <ol>
-                <li>Export your transactions from Commonwealth Bank as a CSV file</li>
-                <li>Make sure Ollama is running with the Gemma2 model</li>
-                <li>Upload the file using the button below</li>
-                <li>Wait for processing to complete (this may take a few minutes)</li>
-                <li>Refresh the page to see your new transactions</li>
-              </ol>
+            <div className="bank-options">
+              <div 
+                className={`bank-option ${selectedUploadType === 'commbank' ? 'selected' : ''}`}
+                onClick={() => setSelectedUploadType('commbank')}
+              >
+                <div className="bank-logo commbank-logo">
+                  <span className="bank-icon">🏦</span>
+                </div>
+                <div className="bank-name">Commonwealth Bank</div>
+                <div className="bank-description">Upload CSV export</div>
+              </div>
+              
+              <div 
+                className={`bank-option ${selectedUploadType === 'westpac' ? 'selected' : ''}`}
+                onClick={() => setSelectedUploadType('westpac')}
+              >
+                <div className="bank-logo westpac-logo">
+                  <span className="bank-icon">🏦</span>
+                </div>
+                <div className="bank-name">Westpac</div>
+                <div className="bank-description">Upload CSV export</div>
+              </div>
+              
+              <div 
+                className={`bank-option ${selectedUploadType === 'upbank' ? 'selected' : ''}`}
+                onClick={() => setSelectedUploadType('upbank')}
+              >
+                <div className="bank-logo upbank-logo">
+                  <span className="bank-icon">🏦</span>
+                </div>
+                <div className="bank-name">Up Bank</div>
+                <div className="bank-description">Connect via API</div>
+              </div>
             </div>
             
-            {uploadProgress > 0 && (
-              <div className="progress-container">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-                <div className="progress-text">
-                  {uploadProgress < 100 ? (
-                    <>Processing transactions... {Math.round(uploadProgress)}%</>
-                  ) : (
-                    <>Processing complete! ✓</>
-                  )}
-                </div>
+            {selectedUploadType && (
+              <div className="upload-details">
+                <button 
+                  className="back-button"
+                  onClick={() => setSelectedUploadType(null)}
+                >
+                  ← Back to options
+                </button>
+                
+                {selectedUploadType === 'commbank' && (
+                  <div className="bank-upload-section">
+                    <h4>Upload Commonwealth Bank Transactions</h4>
+                    <div className="upload-instructions">
+                      <ol>
+                        <li>Log in to your Commonwealth Bank account</li>
+                        <li>Navigate to your account transactions</li>
+                        <li>Select the date range you want to export</li>
+                        <li>Click "Export" and choose CSV format</li>
+                        <li>Upload the downloaded file below</li>
+                      </ol>
+                    </div>
+                    
+                    {uploadProgress > 0 && (
+                      <div className="progress-container">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                        <div className="progress-text">
+                          {uploadProgress < 100 ? (
+                            <>Processing transactions... {Math.round(uploadProgress)}%</>
+                          ) : (
+                            <>Processing complete! ✓</>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {uploadStatus && (
+                      <div className={`upload-status ${uploadStatus.type}`}>
+                        {uploadStatus.message}
+                      </div>
+                    )}
+                    
+                    <div className="upload-controls">
+                      <input
+                        type="file"
+                        id="commbank-file"
+                        accept=".csv"
+                        onChange={(e) => handleFileUpload(e, 'commbank')}
+                        disabled={isUploading}
+                        className="file-input"
+                      />
+                      <label htmlFor="commbank-file" className={`file-input-label ${isUploading ? 'disabled' : ''}`}>
+                        {isUploading ? 'Processing...' : 'Select CommBank CSV File'}
+                      </label>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedUploadType === 'westpac' && (
+                  <div className="bank-upload-section">
+                    <h4>Upload Westpac Transactions</h4>
+                    <div className="upload-instructions">
+                      <ol>
+                        <li>Log in to your Westpac online banking</li>
+                        <li>Go to your account details page</li>
+                        <li>Select "Export transactions" option</li>
+                        <li>Choose CSV format and your date range</li>
+                        <li>Upload the downloaded file below</li>
+                      </ol>
+                    </div>
+                    
+                    {uploadProgress > 0 && (
+                      <div className="progress-container">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                        <div className="progress-text">
+                          {uploadProgress < 100 ? (
+                            <>Processing transactions... {Math.round(uploadProgress)}%</>
+                          ) : (
+                            <>Processing complete! ✓</>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {uploadStatus && (
+                      <div className={`upload-status ${uploadStatus.type}`}>
+                        {uploadStatus.message}
+                      </div>
+                    )}
+                    
+                    <div className="upload-controls">
+                      <input
+                        type="file"
+                        id="westpac-file"
+                        accept=".csv"
+                        onChange={(e) => handleFileUpload(e, 'westpac')}
+                        disabled={isUploading}
+                        className="file-input"
+                      />
+                      <label htmlFor="westpac-file" className={`file-input-label ${isUploading ? 'disabled' : ''}`}>
+                        {isUploading ? 'Processing...' : 'Select Westpac CSV File'}
+                      </label>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedUploadType === 'upbank' && (
+                  <div className="bank-upload-section">
+                    <h4>Connect to Up Bank</h4>
+                    <div className="upload-instructions">
+                      <ol>
+                        <li>Log in to your Up Bank account</li>
+                        <li>Go to "Developer Tools" in your profile settings</li>
+                        <li>Create a new personal access token</li>
+                        <li>Copy the token and paste it below</li>
+                        <li>Click "Connect" to import your transactions</li>
+                      </ol>
+                    </div>
+                    
+                    {uploadProgress > 0 && (
+                      <div className="progress-container">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${uploadProgress}%` }}
+                          ></div>
+                        </div>
+                        <div className="progress-text">
+                          {uploadProgress < 100 ? (
+                            <>Connecting to Up Bank... {Math.round(uploadProgress)}%</>
+                          ) : (
+                            <>Connection complete! ✓</>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {upBankStatus && (
+                      <div className={`upload-status ${upBankStatus.type}`}>
+                        {upBankStatus.message}
+                      </div>
+                    )}
+                    
+                    <div className="api-key-input">
+                      <label htmlFor="up-bank-api-key">Up Bank Personal Access Token</label>
+                      <input
+                        type="password"
+                        id="up-bank-api-key"
+                        value={upBankApiKey}
+                        onChange={(e) => setUpBankApiKey(e.target.value)}
+                        placeholder="up:yeah:your-personal-access-token"
+                        disabled={isUploading}
+                      />
+                    </div>
+                    
+                    <div className="upload-controls">
+                      <button
+                        className={`connect-button ${isUploading ? 'disabled' : ''}`}
+                        onClick={handleUpBankConnect}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? 'Connecting...' : 'Connect to Up Bank'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-            
-            {uploadStatus && (
-              <div className={`upload-status ${uploadStatus.type}`}>
-                {uploadStatus.message}
-              </div>
-            )}
-            
-            <div className="upload-controls">
-              <input
-                type="file"
-                id="transaction-file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="file-input"
-              />
-              <label htmlFor="transaction-file" className={`file-input-label ${isUploading ? 'disabled' : ''}`}>
-                {isUploading ? 'Processing...' : 'Select CSV File'}
-              </label>
-            </div>
           </div>
         </div>
       </div>
@@ -460,9 +698,9 @@ const RawTransactions = () => {
           </button>
           <button 
             className="upload-button"
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => setShowUploadOptions(true)}
           >
-            Upload CSV
+            Import Transactions
           </button>
           <button 
             className="export-button"
@@ -666,7 +904,7 @@ const RawTransactions = () => {
         </div>
       )}
 
-      <UploadModal />
+      <UploadOptionsModal />
     </div>
   );
 };

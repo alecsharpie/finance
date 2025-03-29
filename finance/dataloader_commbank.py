@@ -117,32 +117,6 @@ Output:
 }}
 ```
 
-Input: "-1000.00"
-Output:
-```json
-{{
-    "merchant_name": "Unknown",
-    "transaction_type": "Withdrawal",
-    "location": null,
-    "currency": null,
-    "last_4_card_number": null,
-    "date": null
-}}
-```
-
-Input: "+1000.00"
-Output:
-```json
-{{
-    "merchant_name": "Unknown",
-    "transaction_type": "Deposit",
-    "location": null,
-    "currency": null,
-    "last_4_card_number": null,
-    "date": null
-}}
-```
-
 Now parse this transaction:
 Input: "{transaction}"
 Output:

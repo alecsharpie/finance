@@ -214,6 +214,42 @@ export const uploadCommbankTransactions = async (file) => {
   }
 };
 
+export const uploadWestpacTransactions = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await axios.post(`${API_BASE_URL}/transactions/upload/westpac`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading Westpac transactions:', error);
+    throw error;
+  }
+};
+
+export const fetchUpBankTransactions = async (apiKey) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/transactions/upbank/import`, 
+      { api_key: apiKey },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up Bank transactions:', error);
+    throw error;
+  }
+};
+
 export const fetchMerchantCategoriesBatch = async (merchantNames) => {
   try {
     // Filter out any merchant names that are already cached
