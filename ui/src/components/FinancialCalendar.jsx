@@ -196,8 +196,9 @@ const FinancialCalendar = () => {
     // Calculate the total amount for proper proportions
     const totalAmount = Object.values(combinedCategories).reduce((sum, cat) => sum + cat.total, 0);
     
-    // Sort categories by amount (descending) for consistent display
-    const sortedCategories = Object.entries(combinedCategories).sort((a, b) => b[1].total - a[1].total);
+    // Sort categories by name alphabetically for consistent display across time periods
+    // This ensures categories always appear in the same order for better comparison
+    const sortedCategories = Object.entries(combinedCategories).sort((a, b) => a[0].localeCompare(b[0]));
     
     return (
       <div className="category-bars">
@@ -706,6 +707,9 @@ const FinancialCalendar = () => {
                 
                 const isToday = viewMode === 'daily' && period === new Date().toISOString().split('T')[0];
                 
+                // Sort categories alphabetically by name for consistent display
+                const sortedCategories = Object.entries(allCategories).sort((a, b) => a[0].localeCompare(b[0]));
+                
                 return (
                   <div 
                     key={period} 
@@ -722,8 +726,8 @@ const FinancialCalendar = () => {
                     </div>
                     
                     <div className="spending-bars-container">
-                      {Object.entries(allCategories).length > 0 ? (
-                        Object.entries(allCategories).map(([name, categoryData]) => {
+                      {sortedCategories.length > 0 ? (
+                        sortedCategories.map(([name, categoryData]) => {
                           // Use our global max for consistent scaling
                           const percentWidth = Math.min((categoryData.total / globalMaxAmount) * 100, 100);
                           
@@ -760,7 +764,7 @@ const FinancialCalendar = () => {
                           );
                         })
                       ) : (
-                        <div className="no-data">No category data</div>
+                        <div className="no-data">No spending data</div>
                       )}
                     </div>
                     
