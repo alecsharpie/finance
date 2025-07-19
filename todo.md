@@ -3,3 +3,5 @@ make parsing better, maybe w embedding serach for similar transactions to get me
 auto cateogirsed w LLM and google/duckduckgo search
 westpac data
 up bank data
+
+multiple accounts
