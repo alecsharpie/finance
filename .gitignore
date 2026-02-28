@@ -9,6 +9,8 @@ wheels/
 # Environment
 .venv
 .sesskey
+.env
+.env.local
 
 # Data
 raw_data/

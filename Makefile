@@ -28,4 +28,13 @@ api:
 # Build commands
 build:
 	@echo "Building UI for production..."
-	cd ui && npm run build 
+	cd ui && npm run build
+
+# Up Bank commands
+up-sync:
+	@echo "Syncing Up Bank data..."
+	uv run python -m finance.up_sync
+
+up-health:
+	@echo "Checking Up Bank API connection..."
+	@curl -s http://localhost:3001/up/health | python -m json.tool 

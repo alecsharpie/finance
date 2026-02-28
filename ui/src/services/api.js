@@ -323,4 +323,147 @@ export const updateCategory = async (categoryId, categoryData) => {
     console.error('Error updating category:', error);
     throw error;
   }
+};
+
+// =========================================================================
+// Up Bank API Functions
+// =========================================================================
+
+export const fetchUpHealth = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/health`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking Up Bank health:', error);
+    return { status: 'error', message: error.message };
+  }
+};
+
+export const fetchUpAccounts = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/accounts`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up accounts:', error);
+    throw error;
+  }
+};
+
+export const fetchUpSummary = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/summary`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up summary:', error);
+    throw error;
+  }
+};
+
+export const fetchUpTransactions = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/transactions`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up transactions:', error);
+    throw error;
+  }
+};
+
+export const fetchUpAccountTransactions = async (accountId, params = {}) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/accounts/${accountId}/transactions`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up account transactions:', error);
+    throw error;
+  }
+};
+
+export const fetchUpCategories = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/categories`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up categories:', error);
+    throw error;
+  }
+};
+
+export const fetchSavingsHistory = async (startDate = null, endDate = null) => {
+  try {
+    const params = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const response = await axios.get(`${API_BASE_URL}/up/savings/history`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching savings history:', error);
+    throw error;
+  }
+};
+
+export const fetchTotalSavings = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/savings/total`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total savings:', error);
+    throw error;
+  }
+};
+
+export const fetchSpendingBreakdown = async (accountId = null, startDate = null, endDate = null) => {
+  try {
+    const params = {};
+    if (accountId) params.account_id = accountId;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const response = await axios.get(`${API_BASE_URL}/up/spending/breakdown`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching spending breakdown:', error);
+    throw error;
+  }
+};
+
+export const fetchUpMonthlySpending = async (accountId = null, months = 12) => {
+  try {
+    const params = { months };
+    if (accountId) params.account_id = accountId;
+    const response = await axios.get(`${API_BASE_URL}/up/spending/monthly`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up monthly spending:', error);
+    throw error;
+  }
+};
+
+export const triggerUpSync = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/up/sync`);
+    return response.data;
+  } catch (error) {
+    console.error('Error triggering Up sync:', error);
+    throw error;
+  }
+};
+
+export const fetchUpSyncStatus = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/sync/status`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up sync status:', error);
+    throw error;
+  }
+};
+
+export const recordBalanceSnapshot = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/up/snapshot`);
+    return response.data;
+  } catch (error) {
+    console.error('Error recording balance snapshot:', error);
+    throw error;
+  }
 }; 

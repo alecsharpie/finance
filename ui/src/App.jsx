@@ -3,41 +3,49 @@ import SubscriptionTracker from './components/SubscriptionTracker';
 import FinancialCalendar from './components/FinancialCalendar';
 import MerchantCategoryManager from './components/MerchantCategoryManager';
 import RawTransactions from './components/RawTransactions';
+import UpDashboard from './components/UpDashboard';
 import './styles/RawTransactions.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('up');
 
   return (
     <div className="container welcoming-theme">
       <div className="tab-navigation">
-        <button 
+        <button
+          className={`tab-button ${activeTab === 'up' ? 'active' : ''}`}
+          onClick={() => setActiveTab('up')}
+        >
+          Up Bank
+        </button>
+        <button
           className={`tab-button ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
         >
           Spending Calendar
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'subscriptions' ? 'active' : ''}`}
           onClick={() => setActiveTab('subscriptions')}
         >
           Subscription Tracker
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => setActiveTab('categories')}
         >
           Category Manager
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'raw' ? 'active' : ''}`}
           onClick={() => setActiveTab('raw')}
         >
           Raw Transactions
         </button>
       </div>
-      
+
       <div className="card">
+        {activeTab === 'up' && <UpDashboard />}
         {activeTab === 'calendar' && <FinancialCalendar />}
         {activeTab === 'subscriptions' && <SubscriptionTracker />}
         {activeTab === 'categories' && <MerchantCategoryManager />}

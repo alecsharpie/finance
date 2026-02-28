@@ -10,6 +10,8 @@ import tempfile
 
 from finance.db import FinanceDB
 from finance.dataloader_commbank import process_commbank_transactions_file
+from finance.up_sync import UpBankSync
+from finance.up_client import UpBankClient, UpBankAPIError
 
 # Add parent directory to path to import database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1013,6 +1015,309 @@ def update_category(category_id: int, category_data: dict):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to update category: {str(e)}")
+
+# =========================================================================
+# Up Bank API Endpoints
+# =========================================================================
+
+@app.get("/up/health")
+def up_health_check():
+    """Check Up Bank API connectivity."""
+    try:
+        client = UpBankClient()
+        is_connected = client.ping()
+        return {
+            "status": "connected" if is_connected else "disconnected",
+            "message": "Up Bank API is accessible" if is_connected else "Failed to connect to Up Bank API"
+        }
+    except ValueError as e:
+        return {
+            "status": "not_configured",
+            "message": str(e)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+@app.get("/up/accounts")
+def get_up_accounts():
+    """Get all Up Bank accounts with current balances."""
+    try:
+        accounts_df = db.get_up_accounts()
+        if accounts_df.empty:
+            return []
+        return accounts_df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up accounts: {str(e)}")
+
+@app.get("/up/accounts/{account_id}")
+def get_up_account(account_id: str):
+    """Get a single Up Bank account by ID."""
+    try:
+        account_df = db.get_up_account(account_id)
+        if account_df.empty:
+            raise HTTPException(status_code=404, detail=f"Account not found: {account_id}")
+        return account_df.iloc[0].to_dict()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up account: {str(e)}")
+
+@app.get("/up/accounts/{account_id}/transactions")
+def get_up_account_transactions(
+    account_id: str,
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)"),
+    category_id: str = Query(None, description="Filter by category ID"),
+    limit: int = Query(100, description="Maximum transactions to return"),
+    offset: int = Query(0, description="Offset for pagination")
+):
+    """Get transactions for a specific Up Bank account."""
+    try:
+        transactions_df = db.get_up_transactions(
+            account_id=account_id,
+            start_date=start_date,
+            end_date=end_date,
+            category_id=category_id,
+            limit=limit,
+            offset=offset
+        )
+        return transactions_df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up transactions: {str(e)}")
+
+@app.get("/up/transactions")
+def get_all_up_transactions(
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)"),
+    category_id: str = Query(None, description="Filter by category ID"),
+    limit: int = Query(100, description="Maximum transactions to return"),
+    offset: int = Query(0, description="Offset for pagination")
+):
+    """Get all Up Bank transactions."""
+    try:
+        transactions_df = db.get_up_transactions(
+            start_date=start_date,
+            end_date=end_date,
+            category_id=category_id,
+            limit=limit,
+            offset=offset
+        )
+        return transactions_df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up transactions: {str(e)}")
+
+@app.get("/up/categories")
+def get_up_categories():
+    """Get Up Bank categories."""
+    try:
+        query = """
+        SELECT id, name, parent_id
+        FROM up_categories
+        ORDER BY parent_id NULLS FIRST, name
+        """
+        df = db.run_query_pandas(query)
+        return df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up categories: {str(e)}")
+
+@app.get("/up/savings/history")
+def get_savings_history(
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get savings balance history for charting."""
+    try:
+        history_df = db.get_savings_history(start_date=start_date, end_date=end_date)
+        if history_df.empty:
+            return {"dates": [], "accounts": [], "totals": []}
+
+        # Pivot data for charting
+        pivot_df = history_df.pivot(
+            index='snapshot_date',
+            columns='display_name',
+            values='balance'
+        )
+
+        # Sort by date to ensure proper forward-fill
+        pivot_df = pivot_df.sort_index()
+
+        # Forward-fill only - carries balance forward until next transaction
+        # Do NOT back-fill: accounts should show $0 before they existed
+        pivot_df = pivot_df.ffill().fillna(0)
+
+        # Calculate totals
+        pivot_df['total'] = pivot_df.sum(axis=1)
+
+        return {
+            "dates": pivot_df.index.tolist(),
+            "accounts": {col: pivot_df[col].tolist() for col in pivot_df.columns if col != 'total'},
+            "totals": pivot_df['total'].tolist()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch savings history: {str(e)}")
+
+@app.get("/up/savings/total")
+def get_total_savings():
+    """Get current total savings."""
+    try:
+        total = db.get_total_savings()
+        accounts_df = db.get_up_accounts()
+        savers = accounts_df[accounts_df['account_type'] == 'SAVER'] if not accounts_df.empty else pd.DataFrame()
+
+        return {
+            "total": total,
+            "account_count": len(savers),
+            "accounts": savers.to_dict(orient="records") if not savers.empty else []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch total savings: {str(e)}")
+
+@app.get("/up/spending/breakdown")
+def get_spending_breakdown(
+    account_id: str = Query(None, description="Filter by account ID"),
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get spending breakdown by category."""
+    try:
+        breakdown_df = db.get_spending_by_category(
+            account_id=account_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+        return breakdown_df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch spending breakdown: {str(e)}")
+
+@app.get("/up/spending/monthly")
+def get_up_monthly_spending(
+    account_id: str = Query(None, description="Filter by account ID"),
+    months: int = Query(12, description="Number of months to include")
+):
+    """Get monthly spending totals."""
+    try:
+        monthly_df = db.get_monthly_spending(account_id=account_id, months=months)
+        return monthly_df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch monthly spending: {str(e)}")
+
+@app.post("/up/sync")
+def trigger_up_sync(background_tasks: BackgroundTasks):
+    """Trigger a full sync from Up Bank API."""
+    try:
+        # Check if API is configured
+        try:
+            client = UpBankClient()
+            if not client.ping():
+                raise HTTPException(status_code=503, detail="Up Bank API is not accessible")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Run sync in background
+        def run_sync():
+            sync = UpBankSync(db=db)
+            sync.sync_all()
+
+        background_tasks.add_task(run_sync)
+
+        return {
+            "status": "started",
+            "message": "Up Bank sync started in background"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start sync: {str(e)}")
+
+@app.get("/up/sync/status")
+def get_sync_status():
+    """Get the status of Up Bank sync operations."""
+    try:
+        query = """
+        SELECT
+            sync_type,
+            account_id,
+            started_at,
+            completed_at,
+            status,
+            items_synced,
+            error_message
+        FROM sync_metadata
+        ORDER BY started_at DESC
+        LIMIT 10
+        """
+        df = db.run_query_pandas(query)
+
+        # Get last successful sync
+        last_sync_df = db.get_last_up_sync()
+        last_sync = last_sync_df['last_sync'].iloc[0] if not last_sync_df.empty else None
+
+        return {
+            "last_successful_sync": last_sync,
+            "recent_syncs": df.to_dict(orient="records")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sync status: {str(e)}")
+
+@app.post("/up/snapshot")
+def record_balance_snapshot():
+    """Manually record a balance snapshot for all saver accounts."""
+    try:
+        sync = UpBankSync(db=db)
+        count = sync.record_balance_snapshots(snapshot_type='manual')
+        return {
+            "status": "success",
+            "snapshots_recorded": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to record snapshot: {str(e)}")
+
+@app.get("/up/summary")
+def get_up_summary():
+    """Get a summary of Up Bank finances for dashboard."""
+    try:
+        accounts_df = db.get_up_accounts()
+
+        if accounts_df.empty:
+            return {
+                "total_balance": 0,
+                "total_savings": 0,
+                "accounts": [],
+                "needs_sync": True
+            }
+
+        # Calculate totals
+        total_balance = accounts_df['current_balance'].sum()
+        savers = accounts_df[accounts_df['account_type'] == 'SAVER']
+        total_savings = savers['current_balance'].sum() if not savers.empty else 0
+
+        # Get 2Up account (JOINT ownership)
+        two_up = accounts_df[accounts_df['ownership_type'] == 'JOINT']
+        two_up_balance = two_up['current_balance'].sum() if not two_up.empty else 0
+
+        # Get this month's spending
+        from datetime import date
+        today = date.today()
+        first_of_month = today.replace(day=1).isoformat()
+        monthly_df = db.get_monthly_spending(months=1)
+        this_month_spending = monthly_df['total_spending'].iloc[0] if not monthly_df.empty else 0
+
+        return {
+            "total_balance": total_balance,
+            "total_savings": total_savings,
+            "two_up_balance": two_up_balance,
+            "this_month_spending": this_month_spending,
+            "account_count": len(accounts_df),
+            "saver_count": len(savers),
+            "accounts": accounts_df.to_dict(orient="records"),
+            "needs_sync": False
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up summary: {str(e)}")
+
 
 # Run with: uvicorn main:app --reload --port 3001
 if __name__ == "__main__":
