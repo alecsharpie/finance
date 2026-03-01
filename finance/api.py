@@ -1238,26 +1238,37 @@ def get_daily_transactions(
     date: str,
     account_id: str = Query(None, description="Filter by account ID")
 ):
-    """Get all spending transactions for a specific day."""
+    """Get all spending transactions for a specific day (Melbourne timezone)."""
     try:
-        # Get transactions for this specific day
-        txns = db.get_up_transactions(
-            account_id=account_id,
-            start_date=date,
-            end_date=date
-        )
+        # Use SUBSTR to extract local date from ISO timestamp (preserves Melbourne TZ)
+        # Use created_at (when purchase was made) as primary
+        conditions = [
+            "amount < 0",
+            "SUBSTR(COALESCE(created_at, settled_at), 1, 10) = ?",
+            "description NOT LIKE 'Transfer to %'",
+            "description NOT LIKE 'Transfer from %'",
+            "description NOT LIKE 'Forward to %'",
+            "description NOT LIKE 'Forward from %'",
+        ]
+        params = [date]
+
+        if account_id:
+            conditions.append("account_id = ?")
+            params.append(account_id)
+
+        where_clause = " AND ".join(conditions)
+
+        query = f"""
+        SELECT id, description, amount, created_at, settled_at, category_id
+        FROM up_transactions
+        WHERE {where_clause}
+        ORDER BY created_at DESC
+        """
+
+        txns = db.run_query_pandas(query, params=params)
 
         if txns.empty:
             return []
-
-        # Filter to spending only (exclude transfers and positive amounts)
-        txns = txns[
-            (txns['amount'] < 0) &
-            (~txns['description'].str.startswith('Transfer to', na=False)) &
-            (~txns['description'].str.startswith('Transfer from', na=False)) &
-            (~txns['description'].str.startswith('Forward to', na=False)) &
-            (~txns['description'].str.startswith('Forward from', na=False))
-        ]
 
         # Format for frontend
         result = []
@@ -1265,8 +1276,8 @@ def get_daily_transactions(
             result.append({
                 "id": tx['id'],
                 "description": tx['description'],
-                "amount": abs(tx['amount']),  # Return as positive for display
-                "time": tx.get('settled_at') or tx.get('created_at'),
+                "amount": abs(tx['amount']),
+                "time": tx.get('created_at') or tx.get('settled_at'),
                 "category": tx.get('category_id')
             })
 

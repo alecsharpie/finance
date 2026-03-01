@@ -624,7 +624,9 @@ class FinanceDB:
         self, account_id: str = None, start_date: str = None, end_date: str = None
     ) -> pd.DataFrame:
         """Get daily spending totals for budget tracking.
-        Excludes internal transfers between Up accounts."""
+        Excludes internal transfers between Up accounts.
+        Uses created_at (when purchase was made) and extracts local date from ISO string
+        to preserve Melbourne timezone (since timestamps are stored with +11:00 offset)."""
         conditions = [
             "amount < 0",  # Only expenses
             # Exclude internal transfers
@@ -635,26 +637,31 @@ class FinanceDB:
         ]
         params = []
 
+        # Use SUBSTR to extract local date from ISO timestamp (first 10 chars = YYYY-MM-DD)
+        # This preserves Melbourne timezone since timestamps include the +11:00 offset
+        # Use created_at (when purchase was made) as primary, not settled_at
+        date_expr = "SUBSTR(COALESCE(created_at, settled_at), 1, 10)"
+
         if account_id:
             conditions.append("account_id = ?")
             params.append(account_id)
         if start_date:
-            conditions.append("DATE(COALESCE(settled_at, created_at)) >= ?")
+            conditions.append(f"{date_expr} >= ?")
             params.append(start_date)
         if end_date:
-            conditions.append("DATE(COALESCE(settled_at, created_at)) <= ?")
+            conditions.append(f"{date_expr} <= ?")
             params.append(end_date)
 
         where_clause = " AND ".join(conditions)
 
         query = f"""
         SELECT
-            DATE(COALESCE(settled_at, created_at)) as date,
+            {date_expr} as date,
             COUNT(*) as transaction_count,
             ABS(SUM(amount)) as total_spending
         FROM up_transactions
         WHERE {where_clause}
-        GROUP BY DATE(COALESCE(settled_at, created_at))
+        GROUP BY {date_expr}
         ORDER BY date ASC
         """
         return self.run_query_pandas(query, params=params if params else None)
