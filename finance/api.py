@@ -1204,6 +1204,79 @@ def get_up_monthly_spending(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch monthly spending: {str(e)}")
 
+@app.get("/up/spending/daily")
+def get_daily_spending(
+    account_id: str = Query(None, description="Filter by account ID"),
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get daily spending totals for budget tracking."""
+    try:
+        daily_df = db.get_daily_spending(
+            account_id=account_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        if daily_df.empty:
+            return {
+                "dates": [],
+                "spending": [],
+                "transaction_counts": []
+            }
+
+        return {
+            "dates": daily_df['date'].tolist(),
+            "spending": daily_df['total_spending'].tolist(),
+            "transaction_counts": daily_df['transaction_count'].tolist()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch daily spending: {str(e)}")
+
+@app.get("/up/spending/daily/{date}")
+def get_daily_transactions(
+    date: str,
+    account_id: str = Query(None, description="Filter by account ID")
+):
+    """Get all spending transactions for a specific day."""
+    try:
+        # Get transactions for this specific day
+        txns = db.get_up_transactions(
+            account_id=account_id,
+            start_date=date,
+            end_date=date
+        )
+
+        if txns.empty:
+            return []
+
+        # Filter to spending only (exclude transfers and positive amounts)
+        txns = txns[
+            (txns['amount'] < 0) &
+            (~txns['description'].str.startswith('Transfer to', na=False)) &
+            (~txns['description'].str.startswith('Transfer from', na=False)) &
+            (~txns['description'].str.startswith('Forward to', na=False)) &
+            (~txns['description'].str.startswith('Forward from', na=False))
+        ]
+
+        # Format for frontend
+        result = []
+        for _, tx in txns.iterrows():
+            result.append({
+                "id": tx['id'],
+                "description": tx['description'],
+                "amount": abs(tx['amount']),  # Return as positive for display
+                "time": tx.get('settled_at') or tx.get('created_at'),
+                "category": tx.get('category_id')
+            })
+
+        # Sort by amount descending (biggest purchases first)
+        result.sort(key=lambda x: x['amount'], reverse=True)
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch daily transactions: {str(e)}")
+
 @app.post("/up/sync")
 def trigger_up_sync(background_tasks: BackgroundTasks):
     """Trigger a full sync from Up Bank API."""

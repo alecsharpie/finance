@@ -438,6 +438,32 @@ export const fetchUpMonthlySpending = async (accountId = null, months = 12) => {
   }
 };
 
+export const fetchDailySpending = async (accountId = null, startDate = null, endDate = null) => {
+  try {
+    const params = {};
+    if (accountId) params.account_id = accountId;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const response = await axios.get(`${API_BASE_URL}/up/spending/daily`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching daily spending:', error);
+    throw error;
+  }
+};
+
+export const fetchDailyTransactions = async (date, accountId = null) => {
+  try {
+    const params = {};
+    if (accountId) params.account_id = accountId;
+    const response = await axios.get(`${API_BASE_URL}/up/spending/daily/${date}`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching daily transactions:', error);
+    throw error;
+  }
+};
+
 export const triggerUpSync = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/up/sync`);

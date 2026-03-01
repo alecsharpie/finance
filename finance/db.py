@@ -620,6 +620,45 @@ class FinanceDB:
         """
         return self.run_query_pandas(query, params=params if params else None)
 
+    def get_daily_spending(
+        self, account_id: str = None, start_date: str = None, end_date: str = None
+    ) -> pd.DataFrame:
+        """Get daily spending totals for budget tracking.
+        Excludes internal transfers between Up accounts."""
+        conditions = [
+            "amount < 0",  # Only expenses
+            # Exclude internal transfers
+            "description NOT LIKE 'Transfer to %'",
+            "description NOT LIKE 'Transfer from %'",
+            "description NOT LIKE 'Forward to %'",
+            "description NOT LIKE 'Forward from %'",
+        ]
+        params = []
+
+        if account_id:
+            conditions.append("account_id = ?")
+            params.append(account_id)
+        if start_date:
+            conditions.append("DATE(COALESCE(settled_at, created_at)) >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("DATE(COALESCE(settled_at, created_at)) <= ?")
+            params.append(end_date)
+
+        where_clause = " AND ".join(conditions)
+
+        query = f"""
+        SELECT
+            DATE(COALESCE(settled_at, created_at)) as date,
+            COUNT(*) as transaction_count,
+            ABS(SUM(amount)) as total_spending
+        FROM up_transactions
+        WHERE {where_clause}
+        GROUP BY DATE(COALESCE(settled_at, created_at))
+        ORDER BY date ASC
+        """
+        return self.run_query_pandas(query, params=params if params else None)
+
     def get_last_up_sync(self, account_id: str = None) -> pd.DataFrame:
         """Get the last successful sync time."""
         if account_id:

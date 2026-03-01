@@ -3,8 +3,12 @@
 import os
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Generator, Optional, List
+
+# Melbourne timezone
+MELBOURNE_TZ = ZoneInfo("Australia/Melbourne")
 
 import requests
 from dotenv import load_dotenv
@@ -146,8 +150,15 @@ class UpBankClient:
         params = {"page[size]": min(page_size, 100)}
 
         if since:
+            # Up Bank API requires RFC 3339 format with timezone
+            # If datetime is naive (no timezone), assume Melbourne time
+            if since.tzinfo is None:
+                since = since.replace(tzinfo=MELBOURNE_TZ)
             params["filter[since]"] = since.isoformat()
         if until:
+            # Same for until
+            if until.tzinfo is None:
+                until = until.replace(tzinfo=MELBOURNE_TZ)
             params["filter[until]"] = until.isoformat()
         if category:
             params["filter[category]"] = category

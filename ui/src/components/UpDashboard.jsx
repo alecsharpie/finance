@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AccountOverview from './AccountOverview';
 import SavingsChart from './SavingsChart';
 import SpendingBreakdown from './SpendingBreakdown';
+import DailySpendingChart from './DailySpendingChart';
 import {
   fetchUpHealth,
   fetchUpSummary,
@@ -140,6 +141,7 @@ const UpDashboard = () => {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'savings', label: 'Savings', icon: '🐷' },
     { id: 'spending', label: 'Spending', icon: '💸' },
+    { id: 'budget', label: 'Budget', icon: '🎯' },
   ];
 
   return (
@@ -318,6 +320,7 @@ const UpDashboard = () => {
         )}
         {activeTab === 'savings' && <SavingsChart />}
         {activeTab === 'spending' && <SpendingBreakdown />}
+        {activeTab === 'budget' && <DailySpendingChart />}
       </div>
 
       <style>{`
