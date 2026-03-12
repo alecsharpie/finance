@@ -24,20 +24,11 @@ const SpendingBreakdown = () => {
     const start = new Date();
 
     switch (range) {
-      case '1w':
-        start.setDate(start.getDate() - 7);
-        break;
-      case '1m':
-        start.setMonth(start.getMonth() - 1);
-        break;
-      case '3m':
-        start.setMonth(start.getMonth() - 3);
-        break;
-      case '6m':
-        start.setMonth(start.getMonth() - 6);
-        break;
-      default:
-        start.setMonth(start.getMonth() - 1);
+      case '1w': start.setDate(start.getDate() - 7); break;
+      case '1m': start.setMonth(start.getMonth() - 1); break;
+      case '3m': start.setMonth(start.getMonth() - 3); break;
+      case '6m': start.setMonth(start.getMonth() - 6); break;
+      default: start.setMonth(start.getMonth() - 1);
     }
 
     return {
@@ -46,18 +37,18 @@ const SpendingBreakdown = () => {
     };
   };
 
-  // Using the app's color palette (hex values for Chart.js Canvas compatibility)
+  // Rich, warm colors for light backgrounds
   const categoryColors = [
-    '#E76F51',  // Terracotta (accent)
-    '#94B49F',  // Forest green (welcoming-green)
-    '#7D6B91',  // Lavender (primary)
-    '#98C1D9',  // Sky blue (welcoming-blue)
-    '#9C6644',  // Earthy brown (welcoming-brown)
-    '#A5C9CA',  // Muted teal (secondary)
-    '#F4A261',  // Sandy orange
-    '#E9C46A',  // Mustard
-    '#264653',  // Dark teal
-    '#2A9D8F',  // Teal
+    '#C2533A',  // Terracotta (accent)
+    '#2D8E6F',  // Sage
+    '#8B5CC4',  // Plum
+    '#3B7DD8',  // Ocean
+    '#B8860B',  // Gold
+    '#BE4B87',  // Rose
+    '#10A37F',  // Emerald
+    '#D4764E',  // Warm orange
+    '#0E8DAC',  // Teal
+    '#7C5CBF',  // Violet
   ];
 
   const getColor = (index) => {
@@ -113,16 +104,15 @@ const SpendingBreakdown = () => {
     maintainAspectRatio: false,
     cutout: '65%',
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: 'white',
-        titleColor: '#2D3033',
-        bodyColor: '#2D3033',
-        borderColor: '#F2E9E4',
+        backgroundColor: '#FFFFFF',
+        titleColor: '#2A2A28',
+        bodyColor: '#636360',
+        borderColor: 'rgba(0,0,0,0.08)',
         borderWidth: 1,
         padding: 12,
+        bodyFont: { family: "'IBM Plex Mono', monospace" },
         callbacks: {
           label: (context) => {
             const value = context.raw;
@@ -141,7 +131,6 @@ const SpendingBreakdown = () => {
     { value: '6m', label: '6M' },
   ];
 
-  // Find 2Up account for quick filter
   const twoUpAccount = accounts.find(a => a.ownership_type === 'JOINT');
 
   return (
@@ -157,19 +146,19 @@ const SpendingBreakdown = () => {
           Spending Breakdown
         </h3>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Account Filter */}
           <select
             value={selectedAccount}
             onChange={(e) => setSelectedAccount(e.target.value)}
             style={{
               padding: '8px 16px',
-              borderRadius: '20px',
-              border: '1px solid var(--welcoming-cream)',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
               fontSize: '13px',
-              background: 'white',
+              background: 'var(--bg-surface)',
               cursor: 'pointer',
               color: 'var(--text)',
               fontWeight: '500',
+              fontFamily: 'var(--font-sans)',
             }}
           >
             <option value="all">All Accounts</option>
@@ -183,13 +172,13 @@ const SpendingBreakdown = () => {
             ))}
           </select>
 
-          {/* Date Range */}
           <div style={{
             display: 'flex',
             gap: '4px',
-            background: 'var(--welcoming-cream)',
+            background: 'var(--bg-surface)',
             padding: '4px',
-            borderRadius: '20px'
+            borderRadius: '10px',
+            border: '1px solid var(--border)',
           }}>
             {rangeButtons.map(({ value, label }) => (
               <button
@@ -198,12 +187,13 @@ const SpendingBreakdown = () => {
                 style={{
                   padding: '6px 14px',
                   border: 'none',
-                  borderRadius: '16px',
+                  borderRadius: '7px',
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: '500',
-                  background: dateRange === value ? 'var(--primary)' : 'transparent',
-                  color: dateRange === value ? 'white' : 'var(--text-light)',
+                  fontFamily: 'var(--font-mono)',
+                  background: dateRange === value ? 'var(--accent)' : 'transparent',
+                  color: dateRange === value ? 'white' : 'var(--text-muted)',
                   transition: 'all 0.2s',
                 }}
               >
@@ -218,8 +208,9 @@ const SpendingBreakdown = () => {
         display: 'grid',
         gridTemplateColumns: 'minmax(200px, 280px) 1fr',
         gap: '24px',
-        background: 'var(--welcoming-cream)',
-        borderRadius: '12px',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: '14px',
         padding: '24px',
       }}>
         {loading ? (
@@ -229,7 +220,7 @@ const SpendingBreakdown = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-light)',
+            color: 'var(--text-muted)',
           }}>
             Loading spending data...
           </div>
@@ -240,7 +231,7 @@ const SpendingBreakdown = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--accent)',
+            color: 'var(--negative)',
           }}>
             Error: {error}
           </div>
@@ -252,7 +243,7 @@ const SpendingBreakdown = () => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-light)',
+            color: 'var(--text-muted)',
             gap: '12px',
           }}>
             <span style={{ fontSize: '48px' }}>🛒</span>
@@ -271,12 +262,12 @@ const SpendingBreakdown = () => {
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>Total</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
                 <div style={{
                   fontSize: '20px',
                   fontWeight: '700',
                   color: 'var(--text)',
-                  fontFamily: "'Roboto Mono', monospace"
+                  fontFamily: 'var(--font-mono)',
                 }}>
                   {formatCurrency(totalSpending)}
                 </div>
@@ -287,9 +278,9 @@ const SpendingBreakdown = () => {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
+              gap: '6px',
               maxHeight: '280px',
-              overflowY: 'auto'
+              overflowY: 'auto',
             }}>
               {breakdown.map((cat, index) => (
                 <div
@@ -300,29 +291,35 @@ const SpendingBreakdown = () => {
                     justifyContent: 'space-between',
                     padding: '10px 14px',
                     borderRadius: '10px',
-                    background: 'white',
-                    transition: 'transform 0.2s ease',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateX(4px)';
+                    e.currentTarget.style.background = 'var(--bg-card-hover)';
+                    e.currentTarget.style.transform = 'translateX(3px)';
+                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
                   }}
                   onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-surface)';
                     e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                      width: '12px',
-                      height: '12px',
+                      width: '10px',
+                      height: '10px',
                       borderRadius: '3px',
                       background: getColor(index),
+                      boxShadow: `0 0 6px ${getColor(index)}44`,
                     }} />
                     <div>
                       <div style={{ fontWeight: '500', color: 'var(--text)', fontSize: '14px' }}>
                         {cat.category_name}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
-                        {cat.transaction_count} transaction{cat.transaction_count !== 1 ? 's' : ''}
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {cat.transaction_count} txn{cat.transaction_count !== 1 ? 's' : ''}
                       </div>
                     </div>
                   </div>
@@ -330,11 +327,12 @@ const SpendingBreakdown = () => {
                     <div style={{
                       fontWeight: '600',
                       color: 'var(--text)',
-                      fontFamily: "'Roboto Mono', monospace"
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '14px',
                     }}>
                       {formatCurrency(cat.total_amount)}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                       {((cat.total_amount / totalSpending) * 100).toFixed(1)}%
                     </div>
                   </div>

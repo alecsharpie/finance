@@ -1,421 +1,596 @@
 import React, { useState, useEffect } from 'react';
-import { fetchSubscriptions, fetchRecurringTransactions } from '../services/api';
+import { fetchUpSubscriptions } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 
 const SubscriptionTracker = () => {
   const [subscriptions, setSubscriptions] = useState([]);
-  const [allSubscriptions, setAllSubscriptions] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [patterns, setPatterns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAll, setShowAll] = useState(false);
-  const [sortBy, setSortBy] = useState('cost'); // 'cost', 'name', 'frequency'
-  
+  const [expandedSubscription, setExpandedSubscription] = useState(null);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [monthsToAnalyze, setMonthsToAnalyze] = useState(12);
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch both data sources
-        const [subscriptionsData, recurringData] = await Promise.all([
-          fetchSubscriptions(),
-          fetchRecurringTransactions()
-        ]);
-        
-        // Process and merge the data
-        const mergedData = mergeSubscriptionData(subscriptionsData, recurringData);
-        
-        if (!mergedData || mergedData.length === 0) {
-          // Create sample data for demonstration
-          const sampleData = [
-            {
-              merchant: "Netflix",
-              frequency: "monthly",
-              avgAmount: 14.99,
-              count: 12,
-              months: 12,
-              yearlyTotal: 179.88,
-              transactions: [
-                { date: "2023-11-15", amount: -14.99, desc: "Netflix Subscription" },
-                { date: "2023-10-15", amount: -14.99, desc: "Netflix Subscription" },
-                { date: "2023-09-15", amount: -14.99, desc: "Netflix Subscription" }
-              ]
-            },
-            {
-              merchant: "Spotify",
-              frequency: "monthly",
-              avgAmount: 9.99,
-              count: 12,
-              months: 12,
-              yearlyTotal: 119.88,
-              transactions: [
-                { date: "2023-11-10", amount: -9.99, desc: "Spotify Premium" },
-                { date: "2023-10-10", amount: -9.99, desc: "Spotify Premium" },
-                { date: "2023-09-10", amount: -9.99, desc: "Spotify Premium" }
-              ]
-            }
-          ];
-          
-          setAllSubscriptions(sampleData);
-          setSubscriptions(sampleData);
-        } else {
-          // Store all subscriptions
-          setAllSubscriptions(mergedData);
-          
-          // Filter for likely subscriptions
-          const likelySubscriptions = mergedData.filter(sub => 
-            sub.frequency === 'monthly' || 
-            sub.frequency === 'quarterly' || 
-            sub.months >= 3 ||
-            (sub.count >= 3 && sub.frequency !== 'irregular')
-          );
-          
-          setSubscriptions(likelySubscriptions);
-        }
+        const data = await fetchUpSubscriptions(monthsToAnalyze);
+        setSubscriptions(data.subscriptions || []);
+        setSummary(data.summary);
+        setPatterns(data.patterns || []);
       } catch (err) {
         setError('Failed to load subscription data');
         console.error(err);
-        
-        // Set fallback data on error
-        const fallbackData = [
-          {
-            merchant: "Netflix",
-            frequency: "monthly",
-            avgAmount: 14.99,
-            count: 12,
-            months: 12,
-            yearlyTotal: 179.88,
-            transactions: [
-              { date: "2023-11-15", amount: -14.99, desc: "Netflix Subscription" },
-              { date: "2023-10-15", amount: -14.99, desc: "Netflix Subscription" },
-              { date: "2023-09-15", amount: -14.99, desc: "Netflix Subscription" }
-            ]
-          }
-        ];
-        
-        setAllSubscriptions(fallbackData);
-        setSubscriptions(fallbackData);
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, []);
+  }, [monthsToAnalyze]);
 
-  // Function to merge subscription data from both sources
-  const mergeSubscriptionData = (subscriptionsData, recurringData) => {
-    // Start with subscription data
-    let mergedData = [...(subscriptionsData || [])];
-    
-    // Add yearly total to subscription data
-    mergedData = mergedData.map(sub => {
-      let yearlyTotal = 0;
-      if (sub.frequency === 'monthly') {
-        yearlyTotal = sub.avgAmount * 12;
-      } else if (sub.frequency === 'quarterly') {
-        yearlyTotal = sub.avgAmount * 4;
-      } else if (sub.frequency === 'yearly') {
-        yearlyTotal = sub.avgAmount;
-      } else {
-        // For irregular, estimate based on average frequency
-        const avgPerYear = sub.count / (sub.months / 12);
-        yearlyTotal = sub.avgAmount * avgPerYear;
-      }
-      
-      return {
-        ...sub,
-        yearlyTotal
-      };
-    });
-    
-    // Process recurring transactions data
-    if (recurringData && recurringData.length > 0) {
-      // Check if merchant already exists in merged data
-      recurringData.forEach(recurring => {
-        const existingIndex = mergedData.findIndex(
-          sub => sub.merchant.toLowerCase() === recurring.merchant_name.toLowerCase()
-        );
-        
-        if (existingIndex === -1) {
-          // Add new subscription from recurring data
-          const yearlyTotal = Math.abs(recurring.amount) * (recurring.occurrence_count / 12);
-          mergedData.push({
-            merchant: recurring.merchant_name,
-            frequency: recurring.occurrence_count >= 12 ? 'monthly' : 
-                      recurring.occurrence_count >= 4 ? 'quarterly' : 'irregular',
-            avgAmount: Math.abs(recurring.amount),
-            count: recurring.occurrence_count,
-            months: Math.min(12, recurring.occurrence_count),
-            yearlyTotal,
-            transactions: [
-              { 
-                date: new Date().toISOString().split('T')[0], 
-                amount: -Math.abs(recurring.amount), 
-                desc: `${recurring.merchant_name} recurring payment` 
-              }
-            ]
-          });
-        } else {
-          // Update existing subscription with additional data if needed
-          if (!mergedData[existingIndex].yearlyTotal) {
-            mergedData[existingIndex].yearlyTotal = 
-              Math.abs(recurring.amount) * (recurring.occurrence_count / 12);
-          }
-        }
-      });
-    }
-    
-    return mergedData;
-  };
+  const getFrequencyBadge = (frequency) => {
+    const colors = {
+      monthly: { bg: 'rgba(148, 180, 159, 0.2)', color: '#4a7c59' },
+      quarterly: { bg: 'rgba(125, 107, 145, 0.2)', color: '#5a4a6a' },
+      yearly: { bg: 'rgba(65, 105, 225, 0.2)', color: '#4169e1' },
+      irregular: { bg: 'rgba(231, 111, 81, 0.2)', color: '#c44d34' },
+      unknown: { bg: 'rgba(128, 128, 128, 0.2)', color: '#666' }
+    };
+    const style = colors[frequency] || colors.unknown;
 
-  const sortSubscriptions = (subs) => {
-    switch (sortBy) {
-      case 'cost':
-        return [...subs].sort((a, b) => b.yearlyTotal - a.yearlyTotal);
-      case 'name':
-        return [...subs].sort((a, b) => a.merchant.localeCompare(b.merchant));
-      case 'frequency':
-        return [...subs].sort((a, b) => {
-          const freqOrder = { monthly: 1, quarterly: 2, yearly: 3, irregular: 4 };
-          return freqOrder[a.frequency] - freqOrder[b.frequency];
-        });
-      default:
-        return subs;
-    }
-  };
-
-  const renderSubscriptionList = () => {
-    const subscriptionsToUse = showAll ? allSubscriptions : subscriptions;
-    const sortedSubscriptions = sortSubscriptions(subscriptionsToUse);
-    
-    // Calculate total yearly cost
-    const totalYearlyCost = sortedSubscriptions.reduce(
-      (total, sub) => total + (sub.yearlyTotal || 0), 
-      0
-    );
-    
     return (
-      <div className="subscription-list" style={{
-        padding: '1.5rem',
+      <span style={{
+        padding: '4px 10px',
+        borderRadius: '12px',
+        fontSize: '11px',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        backgroundColor: style.bg,
+        color: style.color
+      }}>
+        {frequency}
+      </span>
+    );
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const formatShortDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'short'
+    });
+  };
+
+  const toggleExpand = (pattern) => {
+    if (expandedSubscription === pattern) {
+      setExpandedSubscription(null);
+      setSelectedTransaction(null);
+    } else {
+      setExpandedSubscription(pattern);
+      setSelectedTransaction(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        padding: '3rem',
+        color: 'var(--text-light)',
         backgroundColor: 'var(--welcoming-cream)',
         borderRadius: '12px'
       }}>
-        <div className="subscription-header-controls" style={{
+        Loading subscription data...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        backgroundColor: '#fee2e2',
+        color: '#ef4444',
+        padding: '1rem',
+        borderRadius: '8px',
+        margin: '1rem 0'
+      }}>{error}</div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 0 }}>
+      {/* Summary Section */}
+      <div style={{
+        backgroundColor: 'var(--welcoming-cream)',
+        borderRadius: '12px',
+        padding: '20px',
+        marginBottom: '20px'
+      }}>
+        <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          marginBottom: '1.5rem',
-          paddingBottom: '1rem',
-          borderBottom: '1px solid rgba(125, 107, 145, 0.2)',
           flexWrap: 'wrap',
-          gap: '1rem'
+          gap: '16px'
         }}>
-          <div className="subscription-title-section">
-            <h3 style={{
-              margin: '0 0 0.5rem 0',
-              color: 'var(--text)',
-              fontSize: '1.5rem'
-            }}>Detected Subscriptions</h3>
-            <div className="subscription-summary" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem',
-              color: 'var(--text-light)'
-            }}>
-              <span className="subscription-count">{sortedSubscriptions.length} subscriptions</span>
-              <span className="subscription-total" style={{
-                fontWeight: '600',
-                color: 'var(--primary)'
-              }}>
-                Total yearly cost: {formatCurrency(totalYearlyCost)}
-              </span>
-            </div>
+          <div>
+            <h2 style={{ margin: '0 0 8px 0', color: 'var(--text)', fontSize: '1.5rem' }}>
+              Up Bank Subscriptions
+            </h2>
+            <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '14px' }}>
+              These recurring costs are spread across your daily budget
+            </p>
           </div>
-          
-          <div className="subscription-controls" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            alignItems: 'flex-end'
-          }}>
-            <div className="sort-controls" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <label style={{ color: 'var(--text-light)' }}>Sort by:</label>
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)}
-                className="sort-select"
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-light)' }}>
+              Analyze:
+              <select
+                value={monthsToAnalyze}
+                onChange={(e) => setMonthsToAnalyze(Number(e.target.value))}
                 style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '20px',
-                  border: 'none',
+                  marginLeft: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(125, 107, 145, 0.2)',
                   backgroundColor: 'white',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                  color: 'var(--text)',
                   cursor: 'pointer'
                 }}
               >
-                <option value="cost">Highest Cost</option>
-                <option value="name">Name</option>
-                <option value="frequency">Frequency</option>
+                <option value={3}>3 months</option>
+                <option value={6}>6 months</option>
+                <option value={12}>12 months</option>
+                <option value={18}>18 months</option>
               </select>
-            </div>
-            
-            <label className="show-all-toggle" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              color: 'var(--text-light)'
-            }}>
-              <input 
-                type="checkbox" 
-                checked={showAll} 
-                onChange={() => setShowAll(!showAll)} 
-                style={{
-                  accentColor: 'var(--primary)'
-                }}
-              />
-              <span className="toggle-label">Show all recurring transactions</span>
             </label>
           </div>
         </div>
-        
-        {sortedSubscriptions.length === 0 ? (
-          <p style={{
-            textAlign: 'center',
-            padding: '3rem',
-            color: 'var(--text-light)',
-            fontStyle: 'italic',
-            backgroundColor: 'rgba(125, 107, 145, 0.05)',
-            borderRadius: '8px',
-            margin: '1rem 0'
-          }}>No subscription patterns detected. Try enabling "Show all recurring transactions".</p>
-        ) : (
-          <div className="subscription-items" style={{
+
+        {/* Summary Stats */}
+        {summary && (
+          <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '1.25rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '12px',
+            marginTop: '20px'
           }}>
-            {sortedSubscriptions.map((sub, idx) => (
-              <div key={idx} className="subscription-item" style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                transition: 'all 0.2s ease',
-                border: 'none'
-              }}>
-                <div className="subscription-header" style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: '1.25rem',
-                  paddingBottom: '0.75rem',
-                  borderBottom: '1px solid rgba(125, 107, 145, 0.1)'
-                }}>
-                  <div>
-                    <h4 style={{
-                      margin: '0 0 0.25rem 0',
-                      color: 'var(--text)',
-                      fontSize: '1.1rem'
-                    }}>{sub.merchant}</h4>
-                    <div className="subscription-frequency" style={{
-                      fontSize: '0.875rem',
-                      color: 'var(--text-light)'
-                    }}>
-                      {sub.frequency === 'monthly' ? 'Monthly subscription' : 
-                       sub.frequency === 'quarterly' ? 'Quarterly subscription' : 
-                       sub.frequency === 'yearly' ? 'Yearly subscription' : 
-                       `Recurring payment (${sub.count} occurrences)`}
-                    </div>
-                  </div>
-                  <div className="subscription-amount" style={{
-                    textAlign: 'right'
-                  }}>
-                    <div className="amount-value" style={{
-                      fontSize: '1.25rem',
-                      fontWeight: '600',
-                      color: 'var(--primary)'
-                    }}>{formatCurrency(sub.avgAmount)}</div>
-                    <div className="amount-yearly" style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-light)'
-                    }}>
-                      {sub.yearlyTotal ? `~${formatCurrency(sub.yearlyTotal)}/year` : ''}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="subscription-transactions">
-                  <div className="transactions-header" style={{
-                    fontWeight: '500',
-                    marginBottom: '0.75rem',
-                    color: 'var(--text)',
-                    fontSize: '0.9rem'
-                  }}>Recent transactions:</div>
-                  <div className="transactions-list" style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    {sub.transactions.slice(0, 3).map((tx, i) => (
-                      <div key={i} className="transaction-item" style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '0.5rem',
-                        backgroundColor: 'rgba(125, 107, 145, 0.05)',
-                        borderRadius: '8px',
-                        fontSize: '0.875rem'
-                      }}>
-                        <span style={{ color: 'var(--text-light)' }}>{tx.date}</span>
-                        <span style={{ 
-                          fontWeight: '500',
-                          color: 'var(--primary)'
-                        }}>{formatCurrency(Math.abs(parseFloat(tx.amount)))}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text)' }}>
+                {summary.patterns_with_data}
               </div>
-            ))}
+              <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                Active Subscriptions
+              </div>
+            </div>
+
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--welcoming-green)' }}>
+                {formatCurrency(summary.total_monthly_estimate)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                Monthly Total
+              </div>
+            </div>
+
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary)' }}>
+                {formatCurrency(summary.total_yearly_estimate)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                Yearly Total
+              </div>
+            </div>
+
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-light)' }}>
+                {formatCurrency(summary.daily_allocation)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                Daily Spread
+              </div>
+            </div>
           </div>
         )}
       </div>
-    );
-  };
 
-  if (loading) return (
-    <div style={{
-      textAlign: 'center',
-      padding: '3rem',
-      color: 'var(--text-light)',
-      backgroundColor: 'var(--welcoming-cream)',
-      borderRadius: '12px'
-    }}>
-      Loading subscription data...
-    </div>
-  );
-  
-  if (error) return (
-    <div className="error" style={{
-      backgroundColor: '#fee2e2',
-      color: '#ef4444',
-      padding: '1rem',
-      borderRadius: '8px',
-      margin: '1rem 0'
-    }}>{error}</div>
-  );
+      {/* Subscription Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {subscriptions.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
+            backgroundColor: 'var(--welcoming-cream)',
+            borderRadius: '12px',
+            color: 'var(--text-light)'
+          }}>
+            No subscription transactions found in the last {monthsToAnalyze} months.
+          </div>
+        ) : (
+          subscriptions.map((sub) => (
+            <div
+              key={sub.pattern}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                border: expandedSubscription === sub.pattern
+                  ? '2px solid var(--welcoming-green)'
+                  : '2px solid transparent',
+                transition: 'all 0.2s'
+              }}
+            >
+              {/* Subscription Header - Clickable */}
+              <div
+                onClick={() => toggleExpand(sub.pattern)}
+                style={{
+                  padding: '16px 20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  backgroundColor: expandedSubscription === sub.pattern
+                    ? 'rgba(148, 180, 159, 0.1)'
+                    : 'transparent',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: 'var(--text)',
+                      marginBottom: '4px'
+                    }}>
+                      {sub.pattern}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '13px',
+                      color: 'var(--text-light)'
+                    }}>
+                      {getFrequencyBadge(sub.frequency)}
+                      <span>{sub.transaction_count} transactions</span>
+                      <span>|</span>
+                      <span>Last: {formatShortDate(sub.last_date)}</span>
+                    </div>
+                  </div>
+                </div>
 
-  return (
-    <div className="subscription-tracker" style={{
-      padding: '0'
-    }}>
-      {renderSubscriptionList()}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: 'var(--welcoming-green)'
+                    }}>
+                      {formatCurrency(sub.monthly_cost_estimate)}/mo
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                      ~{formatCurrency(sub.monthly_cost_estimate * 12)}/year
+                    </div>
+                  </div>
+
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-light)',
+                    transform: expandedSubscription === sub.pattern ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.2s'
+                  }}>
+                    ▼
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Details */}
+              {expandedSubscription === sub.pattern && (
+                <div style={{
+                  borderTop: '1px solid rgba(125, 107, 145, 0.1)',
+                  padding: '20px'
+                }}>
+                  {/* Stats Row */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                    gap: '12px',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: 'var(--welcoming-cream)',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text)' }}>
+                        {formatCurrency(sub.avg_amount)}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>Avg Amount</div>
+                    </div>
+                    <div style={{
+                      backgroundColor: 'var(--welcoming-cream)',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text)' }}>
+                        {formatCurrency(sub.total_spent)}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>Total Spent</div>
+                    </div>
+                    <div style={{
+                      backgroundColor: 'var(--welcoming-cream)',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text)' }}>
+                        {sub.avg_days_between > 0 ? `${Math.round(sub.avg_days_between)} days` : '-'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>Avg Interval</div>
+                    </div>
+                    <div style={{
+                      backgroundColor: 'var(--welcoming-cream)',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text)' }}>
+                        {sub.distinct_months}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>Months Active</div>
+                    </div>
+                  </div>
+
+                  {/* Merchant Names */}
+                  {sub.merchant_names && sub.merchant_names.length > 1 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'var(--text-light)',
+                        marginBottom: '8px',
+                        textTransform: 'uppercase'
+                      }}>
+                        Matched Merchant Names
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {sub.merchant_names.map((name, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              padding: '4px 10px',
+                              backgroundColor: 'var(--welcoming-cream)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: 'var(--text)'
+                            }}
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transaction List */}
+                  <div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: 'var(--text-light)',
+                      marginBottom: '12px',
+                      textTransform: 'uppercase',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>All Transactions ({sub.transactions.length})</span>
+                      <span style={{ fontWeight: '400', textTransform: 'none' }}>
+                        {formatDate(sub.first_date)} - {formatDate(sub.last_date)}
+                      </span>
+                    </div>
+
+                    <div style={{
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      border: '1px solid rgba(125, 107, 145, 0.1)',
+                      borderRadius: '8px'
+                    }}>
+                      <table style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '13px'
+                      }}>
+                        <thead>
+                          <tr style={{
+                            backgroundColor: 'var(--welcoming-cream)',
+                            position: 'sticky',
+                            top: 0
+                          }}>
+                            <th style={{
+                              padding: '10px 12px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: 'var(--text-light)'
+                            }}>Date</th>
+                            <th style={{
+                              padding: '10px 12px',
+                              textAlign: 'left',
+                              fontWeight: '600',
+                              color: 'var(--text-light)'
+                            }}>Description</th>
+                            <th style={{
+                              padding: '10px 12px',
+                              textAlign: 'right',
+                              fontWeight: '600',
+                              color: 'var(--text-light)'
+                            }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sub.transactions.map((tx, idx) => (
+                            <tr
+                              key={tx.id || idx}
+                              onClick={() => setSelectedTransaction(
+                                selectedTransaction?.id === tx.id ? null : tx
+                              )}
+                              style={{
+                                cursor: 'pointer',
+                                backgroundColor: selectedTransaction?.id === tx.id
+                                  ? 'rgba(148, 180, 159, 0.15)'
+                                  : idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.02)',
+                                transition: 'background 0.15s'
+                              }}
+                            >
+                              <td style={{
+                                padding: '10px 12px',
+                                color: 'var(--text-light)',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {formatDate(tx.date)}
+                              </td>
+                              <td style={{
+                                padding: '10px 12px',
+                                color: 'var(--text)',
+                                maxWidth: '300px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {tx.description}
+                              </td>
+                              <td style={{
+                                padding: '10px 12px',
+                                textAlign: 'right',
+                                fontWeight: '600',
+                                color: 'var(--text)',
+                                fontFamily: 'monospace'
+                              }}>
+                                {formatCurrency(tx.amount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Selected Transaction Detail */}
+                    {selectedTransaction && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '16px',
+                        backgroundColor: 'rgba(148, 180, 159, 0.1)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(148, 180, 159, 0.3)'
+                      }}>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: 'var(--welcoming-green)',
+                          marginBottom: '8px',
+                          textTransform: 'uppercase'
+                        }}>
+                          Transaction Details
+                        </div>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'auto 1fr',
+                          gap: '8px 16px',
+                          fontSize: '13px'
+                        }}>
+                          <span style={{ color: 'var(--text-light)' }}>ID:</span>
+                          <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                            {selectedTransaction.id}
+                          </span>
+
+                          <span style={{ color: 'var(--text-light)' }}>Date:</span>
+                          <span>{formatDate(selectedTransaction.date)}</span>
+
+                          <span style={{ color: 'var(--text-light)' }}>Description:</span>
+                          <span>{selectedTransaction.description}</span>
+
+                          <span style={{ color: 'var(--text-light)' }}>Amount:</span>
+                          <span style={{ fontWeight: '600' }}>
+                            {formatCurrency(selectedTransaction.amount)}
+                          </span>
+
+                          {selectedTransaction.category_id && (
+                            <>
+                              <span style={{ color: 'var(--text-light)' }}>Category:</span>
+                              <span>{selectedTransaction.category_id}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Footer Info */}
+      <div style={{
+        marginTop: '24px',
+        padding: '16px',
+        backgroundColor: 'rgba(125, 107, 145, 0.1)',
+        borderRadius: '8px',
+        fontSize: '13px',
+        color: 'var(--text-light)'
+      }}>
+        <strong>Budget Integration:</strong> These subscriptions are excluded from your daily
+        discretionary budget calculations. The {formatCurrency(summary?.daily_allocation || 0)}/day
+        subscription allocation is spread evenly, so you won't see budget spikes when subscriptions
+        charge.
+        <div style={{ marginTop: '8px' }}>
+          <strong>Tracked Patterns:</strong> {patterns.join(', ')}
+        </div>
+      </div>
     </div>
   );
 };
 
-export default SubscriptionTracker; 
+export default SubscriptionTracker;

@@ -452,6 +452,20 @@ export const fetchDailySpending = async (accountId = null, startDate = null, end
   }
 };
 
+export const fetchDailySpendingAdjusted = async (accountId = null, startDate = null, endDate = null) => {
+  try {
+    const params = {};
+    if (accountId) params.account_id = accountId;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const response = await axios.get(`${API_BASE_URL}/up/spending/daily-adjusted`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching adjusted daily spending:', error);
+    throw error;
+  }
+};
+
 export const fetchDailyTransactions = async (date, accountId = null) => {
   try {
     const params = {};
@@ -490,6 +504,52 @@ export const recordBalanceSnapshot = async () => {
     return response.data;
   } catch (error) {
     console.error('Error recording balance snapshot:', error);
+    throw error;
+  }
+};
+
+export const fetchUpSubscriptions = async (months = 12) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/up/subscriptions`, {
+      params: { months }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Up subscriptions:', error);
+    throw error;
+  }
+};
+
+// =========================================================================
+// ETF Analysis Functions
+// =========================================================================
+
+export const fetchETFAnalysis = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/etf/analysis`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching ETF analysis:', error);
+    throw error;
+  }
+};
+
+export const fetchSingleETFAnalysis = async (ticker) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/etf/analysis/${ticker}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ETF analysis for ${ticker}:`, error);
+    throw error;
+  }
+};
+
+export const fetchETFConfig = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/etf/config`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching ETF config:', error);
     throw error;
   }
 }; 

@@ -2,12 +2,12 @@ import React from 'react';
 import { formatCurrency } from '../utils/formatters';
 
 const AccountOverview = ({ accounts, onRefresh }) => {
-  const getAccountTypeColor = (type) => {
+  const getAccountAccent = (type) => {
     switch (type) {
-      case 'SAVER': return 'var(--welcoming-green)';
-      case 'TRANSACTIONAL': return 'var(--welcoming-blue)';
-      case 'HOME_LOAN': return 'var(--primary)';
-      default: return 'var(--text-light)';
+      case 'SAVER': return 'var(--positive)';
+      case 'TRANSACTIONAL': return '#3B7DD8';
+      case 'HOME_LOAN': return 'var(--accent)';
+      default: return 'var(--text-muted)';
     }
   };
 
@@ -21,7 +21,6 @@ const AccountOverview = ({ accounts, onRefresh }) => {
     }
   };
 
-  // Group accounts by type
   const savers = accounts.filter(a => a.account_type === 'SAVER');
   const transactional = accounts.filter(a => a.account_type === 'TRANSACTIONAL');
   const other = accounts.filter(a => !['SAVER', 'TRANSACTIONAL'].includes(a.account_type));
@@ -33,45 +32,52 @@ const AccountOverview = ({ accounts, onRefresh }) => {
     <div
       key={account.id}
       style={{
-        background: 'var(--welcoming-cream)',
+        background: 'var(--bg-card)',
         borderRadius: '12px',
         padding: '16px',
-        borderLeft: `4px solid ${getAccountTypeColor(account.account_type)}`,
+        borderLeft: `3px solid ${getAccountAccent(account.account_type)}`,
+        border: '1px solid var(--border)',
+        borderLeftWidth: '3px',
+        borderLeftColor: getAccountAccent(account.account_type),
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        gap: '10px',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        e.currentTarget.style.background = 'var(--bg-card-hover)';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+        e.currentTarget.style.borderLeftColor = getAccountAccent(account.account_type);
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.background = 'var(--bg-card)';
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+        e.currentTarget.style.borderLeftColor = getAccountAccent(account.account_type);
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '28px' }}>
+          <span style={{ fontSize: '24px' }}>
             {getAccountIcon(account.account_type, account.ownership_type)}
           </span>
           <div>
-            <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '15px' }}>
+            <div style={{ fontWeight: '600', color: 'var(--text)', fontSize: '14px' }}>
               {account.display_name}
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               {account.account_type}
-              {account.ownership_type === 'JOINT' && ' • Shared'}
+              {account.ownership_type === 'JOINT' && ' \u00b7 Shared'}
             </div>
           </div>
         </div>
       </div>
       <div style={{
-        fontSize: '24px',
+        fontSize: '22px',
         fontWeight: '700',
-        color: account.current_balance >= 0 ? 'var(--welcoming-green)' : 'var(--accent)',
-        fontFamily: "'Roboto Mono', monospace"
+        color: account.current_balance >= 0 ? 'var(--positive)' : 'var(--negative)',
+        fontFamily: 'var(--font-mono)',
+        letterSpacing: '-0.02em',
       }}>
         {formatCurrency(account.current_balance)}
       </div>
@@ -83,24 +89,27 @@ const AccountOverview = ({ accounts, onRefresh }) => {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '12px'
+      marginBottom: '12px',
     }}>
       <h3 style={{
         margin: 0,
         color: 'var(--text)',
-        fontSize: '16px',
-        fontWeight: '600'
+        fontSize: '15px',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
       }}>
         {title}
       </h3>
       <div style={{
-        fontSize: '14px',
-        color: 'var(--text-light)',
+        fontSize: '13px',
+        color: 'var(--text-muted)',
         display: 'flex',
-        gap: '12px'
+        gap: '12px',
+        fontFamily: 'var(--font-mono)',
       }}>
-        <span>{count} account{count !== 1 ? 's' : ''}</span>
-        <span style={{ fontWeight: '600', color: 'var(--welcoming-green)' }}>
+        <span>{count} acct{count !== 1 ? 's' : ''}</span>
+        <span style={{ fontWeight: '600', color: 'var(--positive)' }}>
           {formatCurrency(total)}
         </span>
       </div>
@@ -109,35 +118,32 @@ const AccountOverview = ({ accounts, onRefresh }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      {/* Saver Accounts */}
       {savers.length > 0 && (
         <div>
           <SectionHeader title="Saver Accounts" total={totalSavings} count={savers.length} />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '12px'
+            gap: '12px',
           }}>
             {savers.map(renderAccountCard)}
           </div>
         </div>
       )}
 
-      {/* Transactional Accounts */}
       {transactional.length > 0 && (
         <div>
           <SectionHeader title="Spending Accounts" total={totalTransactional} count={transactional.length} />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '12px'
+            gap: '12px',
           }}>
             {transactional.map(renderAccountCard)}
           </div>
         </div>
       )}
 
-      {/* Other Accounts */}
       {other.length > 0 && (
         <div>
           <SectionHeader
@@ -148,7 +154,7 @@ const AccountOverview = ({ accounts, onRefresh }) => {
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '12px'
+            gap: '12px',
           }}>
             {other.map(renderAccountCard)}
           </div>

@@ -31,32 +31,21 @@ const SavingsChart = ({ dateRange = '6m' }) => {
   const [error, setError] = useState(null);
   const [selectedRange, setSelectedRange] = useState(dateRange);
   const [hiddenDatasets, setHiddenDatasets] = useState(new Set());
-  const [yAxisMax, setYAxisMax] = useState(null); // Fixed Y-axis max
+  const [yAxisMax, setYAxisMax] = useState(null);
   const chartRef = useRef(null);
-  const rawAccountData = useRef(null); // Store original account data for recalculating totals
+  const rawAccountData = useRef(null);
 
   const getDateRange = (range) => {
     const end = new Date();
     const start = new Date();
 
     switch (range) {
-      case '1m':
-        start.setMonth(start.getMonth() - 1);
-        break;
-      case '3m':
-        start.setMonth(start.getMonth() - 3);
-        break;
-      case '6m':
-        start.setMonth(start.getMonth() - 6);
-        break;
-      case '1y':
-        start.setFullYear(start.getFullYear() - 1);
-        break;
-      case 'all':
-        start.setFullYear(2020);
-        break;
-      default:
-        start.setMonth(start.getMonth() - 6);
+      case '1m': start.setMonth(start.getMonth() - 1); break;
+      case '3m': start.setMonth(start.getMonth() - 3); break;
+      case '6m': start.setMonth(start.getMonth() - 6); break;
+      case '1y': start.setFullYear(start.getFullYear() - 1); break;
+      case 'all': start.setFullYear(2020); break;
+      default: start.setMonth(start.getMonth() - 6);
     }
 
     return {
@@ -65,38 +54,35 @@ const SavingsChart = ({ dateRange = '6m' }) => {
     };
   };
 
-  // Emoji-aligned colors for each account
+  // Warm, rich colors for light backgrounds
   const emojiColors = {
-    '💛': { bg: 'rgba(255, 193, 7, 0.35)', border: '#FFC107' },    // Yellow heart - gold
-    '🪺': { bg: 'rgba(139, 90, 43, 0.35)', border: '#8B5A2B' },    // Nest - brown
-    '📈': { bg: 'rgba(33, 150, 243, 0.35)', border: '#2196F3' },   // Chart - blue
-    '🌿': { bg: 'rgba(76, 175, 80, 0.35)', border: '#4CAF50' },    // Herb - green
-    '🌊': { bg: 'rgba(0, 188, 212, 0.35)', border: '#00BCD4' },    // Wave - cyan
-    '🚴': { bg: 'rgba(255, 87, 34, 0.35)', border: '#FF5722' },    // Bike - orange
-    '🏠': { bg: 'rgba(233, 30, 99, 0.35)', border: '#E91E63' },    // House - pink
-    '🗺️': { bg: 'rgba(156, 39, 176, 0.35)', border: '#9C27B0' },   // Map - purple
+    '\u{1F49B}': { bg: 'rgba(202, 138, 4, 0.12)', border: '#B8860B' },
+    '\u{1FAA2}': { bg: 'rgba(160, 100, 45, 0.12)', border: '#8B6914' },
+    '\u{1F4C8}': { bg: 'rgba(59, 130, 246, 0.12)', border: '#3B7DD8' },
+    '\u{1F33F}': { bg: 'rgba(45, 142, 111, 0.12)', border: '#2D8E6F' },
+    '\u{1F30A}': { bg: 'rgba(14, 165, 188, 0.12)', border: '#0E8DAC' },
+    '\u{1F6B4}': { bg: 'rgba(194, 83, 58, 0.12)', border: '#C2533A' },
+    '\u{1F3E0}': { bg: 'rgba(190, 75, 135, 0.12)', border: '#BE4B87' },
+    '\u{1F5FA}\uFE0F': { bg: 'rgba(139, 92, 196, 0.12)', border: '#8B5CC4' },
   };
 
-  // Fallback colors for accounts without emoji matches
   const fallbackColors = [
-    { bg: 'rgba(148, 180, 159, 0.4)', border: '#94B49F' },
-    { bg: 'rgba(152, 193, 217, 0.4)', border: '#98C1D9' },
-    { bg: 'rgba(125, 107, 145, 0.4)', border: '#7D6B91' },
-    { bg: 'rgba(231, 111, 81, 0.4)', border: '#E76F51' },
-    { bg: 'rgba(156, 102, 68, 0.4)', border: '#9C6644' },
-    { bg: 'rgba(165, 201, 202, 0.4)', border: '#A5C9CA' },
-    { bg: 'rgba(244, 162, 97, 0.4)', border: '#F4A261' },
-    { bg: 'rgba(233, 196, 106, 0.4)', border: '#E9C46A' },
+    { bg: 'rgba(45, 142, 111, 0.12)', border: '#2D8E6F' },
+    { bg: 'rgba(59, 130, 246, 0.12)', border: '#3B7DD8' },
+    { bg: 'rgba(139, 92, 196, 0.12)', border: '#8B5CC4' },
+    { bg: 'rgba(194, 83, 58, 0.12)', border: '#C2533A' },
+    { bg: 'rgba(202, 138, 4, 0.12)', border: '#B8860B' },
+    { bg: 'rgba(16, 163, 127, 0.12)', border: '#10A37F' },
+    { bg: 'rgba(190, 75, 135, 0.12)', border: '#BE4B87' },
+    { bg: 'rgba(196, 77, 77, 0.12)', border: '#C44D4D' },
   ];
 
   const getColorForAccount = (accountName, index) => {
-    // Check if account name starts with an emoji we recognize
     for (const [emoji, colors] of Object.entries(emojiColors)) {
       if (accountName.includes(emoji)) {
         return colors;
       }
     }
-    // Fallback to indexed colors
     return fallbackColors[index % fallbackColors.length];
   };
 
@@ -117,13 +103,11 @@ const SavingsChart = ({ dateRange = '6m' }) => {
 
         const accountNames = Object.keys(data.accounts || {});
 
-        // Store raw data for recalculating totals
         rawAccountData.current = {
           accounts: data.accounts,
           numPoints: data.dates.length,
         };
 
-        // Reset hidden datasets when data changes
         setHiddenDatasets(new Set());
 
         const datasets = accountNames.map((name, index) => {
@@ -131,7 +115,7 @@ const SavingsChart = ({ dateRange = '6m' }) => {
           return {
             label: name,
             data: data.accounts[name],
-            fill: false, // Disabled fill to avoid overlap artifacts
+            fill: false,
             backgroundColor: colors.bg,
             borderColor: colors.border,
             borderWidth: 2.5,
@@ -139,33 +123,30 @@ const SavingsChart = ({ dateRange = '6m' }) => {
             pointRadius: data.dates.length < 20 ? 2 : 0,
             pointHoverRadius: 5,
             pointBackgroundColor: colors.border,
-            isAccountData: true, // Mark as account data for legend handling
+            isAccountData: true,
           };
         });
 
-        // Add total line
         datasets.push({
           label: 'Total Savings',
           data: data.totals,
           fill: false,
-          backgroundColor: 'rgba(45, 48, 51, 0.1)',
-          borderColor: '#2D3033',
+          backgroundColor: 'rgba(42, 42, 40, 0.08)',
+          borderColor: '#2A2A28',
           borderWidth: 3,
           borderDash: [5, 5],
           tension: 0.4,
           pointRadius: data.dates.length < 15 ? 4 : 0,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#2D3033',
-          isAccountData: false, // This is the total, not an account
+          pointBackgroundColor: '#2A2A28',
+          isAccountData: false,
         });
 
-        // Format labels with year when data spans multiple years
         const years = new Set(data.dates.map(d => new Date(d).getFullYear()));
         const showYear = years.size > 1;
 
-        // Calculate fixed Y-axis max from total savings (with some padding)
         const maxTotal = Math.max(...data.totals);
-        setYAxisMax(Math.ceil(maxTotal * 1.1 / 1000) * 1000); // Round up to nearest 1000 with 10% padding
+        setYAxisMax(Math.ceil(maxTotal * 1.1 / 1000) * 1000);
 
         setChartData({
           labels: data.dates.map(d => {
@@ -187,23 +168,17 @@ const SavingsChart = ({ dateRange = '6m' }) => {
     loadData();
   }, [selectedRange]);
 
-  // Custom legend click handler to recalculate totals
   const handleLegendClick = useCallback((e, legendItem, legend) => {
     const index = legendItem.datasetIndex;
     const chart = legend.chart;
     const dataset = chart.data.datasets[index];
 
-    // Don't allow hiding the Total Savings line via legend
-    if (!dataset.isAccountData) {
-      return;
-    }
+    if (!dataset.isAccountData) return;
 
-    // Check current visibility and toggle
     const isCurrentlyVisible = chart.isDatasetVisible(index);
     const willBeVisible = !isCurrentlyVisible;
     chart.setDatasetVisibility(index, willBeVisible);
 
-    // Update hidden datasets and recalculate totals
     const newHidden = new Set(hiddenDatasets);
     if (willBeVisible) {
       newHidden.delete(index);
@@ -212,7 +187,6 @@ const SavingsChart = ({ dateRange = '6m' }) => {
     }
     setHiddenDatasets(newHidden);
 
-    // Recalculate totals immediately
     if (rawAccountData.current) {
       const { accounts, numPoints } = rawAccountData.current;
       const accountNames = Object.keys(accounts);
@@ -226,7 +200,6 @@ const SavingsChart = ({ dateRange = '6m' }) => {
         }
       });
 
-      // Update the Total Savings dataset (last dataset)
       const totalDatasetIndex = chart.data.datasets.length - 1;
       chart.data.datasets[totalDatasetIndex].data = newTotals;
       chart.update('none');
@@ -247,30 +220,26 @@ const SavingsChart = ({ dateRange = '6m' }) => {
           usePointStyle: true,
           padding: 16,
           font: {
-            family: "'Inter', sans-serif",
+            family: "'Outfit', sans-serif",
             size: 12,
           },
+          color: '#636360',
           boxWidth: 8,
           boxHeight: 8,
-          // Filter out Total Savings from legend if you want, or keep it
-          filter: (legendItem) => true,
+          filter: () => true,
         },
         onClick: handleLegendClick,
       },
       tooltip: {
-        backgroundColor: 'white',
-        titleColor: '#2D3033',
-        bodyColor: '#2D3033',
-        borderColor: '#F2E9E4',
+        backgroundColor: '#FFFFFF',
+        titleColor: '#2A2A28',
+        bodyColor: '#636360',
+        borderColor: 'rgba(0,0,0,0.08)',
         borderWidth: 1,
         padding: 12,
-        titleFont: {
-          size: 13,
-          weight: '600',
-        },
-        bodyFont: {
-          size: 12,
-        },
+        titleFont: { size: 13, weight: '600', family: "'Outfit', sans-serif" },
+        bodyFont: { size: 12, family: "'IBM Plex Mono', monospace" },
+        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
         callbacks: {
           label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw)}`,
         },
@@ -278,14 +247,10 @@ const SavingsChart = ({ dateRange = '6m' }) => {
     },
     scales: {
       x: {
-        grid: {
-          display: false,
-        },
+        grid: { display: false },
         ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11,
-          },
+          font: { family: "'Outfit', sans-serif", size: 11 },
+          color: '#9A9A94',
           maxRotation: 45,
           minRotation: 0,
           autoSkip: true,
@@ -293,18 +258,16 @@ const SavingsChart = ({ dateRange = '6m' }) => {
         },
       },
       y: {
-        min: 0, // Lock y-axis to never go below 0 for savings
-        max: yAxisMax, // Fixed max so toggling accounts doesn't rescale
+        min: 0,
+        max: yAxisMax,
         beginAtZero: true,
         ticks: {
           callback: (value) => formatCurrency(value),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11,
-          },
+          font: { family: "'IBM Plex Mono', monospace", size: 11 },
+          color: '#9A9A94',
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
+          color: 'rgba(0, 0, 0, 0.04)',
         },
       },
     },
@@ -327,9 +290,10 @@ const SavingsChart = ({ dateRange = '6m' }) => {
         <div style={{
           display: 'flex',
           gap: '4px',
-          background: 'var(--welcoming-cream)',
+          background: 'var(--bg-surface)',
           padding: '4px',
-          borderRadius: '20px'
+          borderRadius: '10px',
+          border: '1px solid var(--border)',
         }}>
           {rangeButtons.map(({ value, label }) => (
             <button
@@ -338,12 +302,13 @@ const SavingsChart = ({ dateRange = '6m' }) => {
               style={{
                 padding: '6px 14px',
                 border: 'none',
-                borderRadius: '16px',
+                borderRadius: '7px',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: '500',
-                background: selectedRange === value ? 'var(--welcoming-green)' : 'transparent',
-                color: selectedRange === value ? 'white' : 'var(--text-light)',
+                fontFamily: 'var(--font-mono)',
+                background: selectedRange === value ? 'var(--accent)' : 'transparent',
+                color: selectedRange === value ? 'white' : 'var(--text-muted)',
                 transition: 'all 0.2s',
               }}
             >
@@ -354,8 +319,9 @@ const SavingsChart = ({ dateRange = '6m' }) => {
       </div>
 
       <div style={{
-        background: 'var(--welcoming-cream)',
-        borderRadius: '12px',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: '14px',
         padding: '24px',
         height: '500px',
       }}>
@@ -365,7 +331,7 @@ const SavingsChart = ({ dateRange = '6m' }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-light)',
+            color: 'var(--text-muted)',
           }}>
             Loading savings data...
           </div>
@@ -375,7 +341,7 @@ const SavingsChart = ({ dateRange = '6m' }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--accent)',
+            color: 'var(--negative)',
           }}>
             Error: {error}
           </div>
@@ -386,7 +352,7 @@ const SavingsChart = ({ dateRange = '6m' }) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-light)',
+            color: 'var(--text-muted)',
             gap: '12px',
           }}>
             <span style={{ fontSize: '48px' }}>📊</span>
@@ -402,7 +368,7 @@ const SavingsChart = ({ dateRange = '6m' }) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-light)',
+            color: 'var(--text-muted)',
             gap: '12px',
           }}>
             <span style={{ fontSize: '48px' }}>🌱</span>
@@ -414,7 +380,8 @@ const SavingsChart = ({ dateRange = '6m' }) => {
               marginTop: '12px',
               fontSize: '24px',
               fontWeight: '700',
-              color: 'var(--welcoming-green)'
+              color: 'var(--positive)',
+              fontFamily: 'var(--font-mono)',
             }}>
               {formatCurrency(chartData.datasets[chartData.datasets.length - 1].data[0])}
             </div>

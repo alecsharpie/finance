@@ -12,6 +12,23 @@ from finance.db import FinanceDB
 from finance.dataloader_commbank import process_commbank_transactions_file
 from finance.up_sync import UpBankSync
 from finance.up_client import UpBankClient, UpBankAPIError
+from finance.etf_analysis import get_all_etf_analysis, process_ticker, load_etf_config
+
+# Subscription merchant patterns - transactions matching these are "fixed costs"
+# and should be spread across the month rather than spiking on specific days
+SUBSCRIPTION_PATTERNS = [
+    "Google One",
+    "Google Cloud",
+    "Hetzner",
+    "Apple",
+    "Kobo",
+    "Victor Chang",
+    "Sacred Heart Mission",
+]
+
+# Monthly subscription budget (based on analysis of recurring costs)
+# This will be spread daily: ~$132.49 / 30.5 = ~$4.34/day
+MONTHLY_SUBSCRIPTION_BUDGET = 132.49
 
 # Add parent directory to path to import database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1288,6 +1305,244 @@ def get_daily_transactions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch daily transactions: {str(e)}")
 
+@app.get("/up/subscriptions")
+def get_up_subscriptions(
+    months: int = Query(12, description="Number of months to analyze")
+):
+    """Get detailed subscription data from Up Bank transactions.
+
+    Returns all transactions matching subscription patterns with:
+    - Full transaction history
+    - Monthly totals
+    - Frequency analysis
+    - Whether each is included in budget calculations
+    """
+    try:
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - relativedelta(months=months)
+
+        results = []
+
+        for pattern in SUBSCRIPTION_PATTERNS:
+            # Get all transactions matching this pattern
+            query = """
+            SELECT
+                id,
+                description,
+                ABS(amount) as amount,
+                SUBSTR(COALESCE(created_at, settled_at), 1, 10) as date,
+                SUBSTR(COALESCE(created_at, settled_at), 1, 7) as month,
+                category_id
+            FROM up_transactions
+            WHERE description LIKE ?
+              AND amount < 0
+              AND SUBSTR(COALESCE(created_at, settled_at), 1, 10) >= ?
+            ORDER BY created_at DESC
+            """
+
+            df = db.run_query_pandas(query, params=(f'%{pattern}%', start_date.strftime('%Y-%m-%d')))
+
+            if df.empty:
+                continue
+
+            # Calculate statistics
+            total_spent = df['amount'].sum()
+            avg_amount = df['amount'].mean()
+            tx_count = len(df)
+            distinct_months = df['month'].nunique()
+
+            # Calculate frequency
+            if tx_count >= 2:
+                dates = pd.to_datetime(df['date']).sort_values()
+                days_between = dates.diff().dropna().dt.days.tolist()
+                avg_days = sum(days_between) / len(days_between) if days_between else 0
+
+                if 20 <= avg_days <= 40:
+                    frequency = 'monthly'
+                elif 80 <= avg_days <= 100:
+                    frequency = 'quarterly'
+                elif 350 <= avg_days <= 380:
+                    frequency = 'yearly'
+                else:
+                    frequency = 'irregular'
+            else:
+                frequency = 'unknown'
+                avg_days = 0
+                days_between = []
+
+            # Calculate monthly cost estimate
+            if frequency == 'monthly':
+                monthly_cost = avg_amount
+            elif frequency == 'quarterly':
+                monthly_cost = avg_amount / 3
+            elif frequency == 'yearly':
+                monthly_cost = avg_amount / 12
+            else:
+                # Use actual average per month
+                months_span = max(1, distinct_months)
+                monthly_cost = total_spent / months_span
+
+            # Group by month for chart data
+            monthly_totals = df.groupby('month')['amount'].sum().to_dict()
+
+            results.append({
+                'pattern': pattern,
+                'merchant_names': df['description'].unique().tolist(),
+                'transaction_count': tx_count,
+                'distinct_months': distinct_months,
+                'total_spent': round(total_spent, 2),
+                'avg_amount': round(avg_amount, 2),
+                'frequency': frequency,
+                'monthly_cost_estimate': round(monthly_cost, 2),
+                'avg_days_between': round(avg_days, 1),
+                'days_between_transactions': days_between,
+                'monthly_totals': monthly_totals,
+                'first_date': df['date'].min(),
+                'last_date': df['date'].max(),
+                'transactions': df.to_dict(orient='records'),
+                'is_budget_subscription': True  # All patterns are in budget
+            })
+
+        # Calculate totals
+        total_monthly = sum(r['monthly_cost_estimate'] for r in results)
+        total_yearly = total_monthly * 12
+
+        return {
+            'subscriptions': results,
+            'summary': {
+                'total_patterns': len(SUBSCRIPTION_PATTERNS),
+                'patterns_with_data': len(results),
+                'total_monthly_estimate': round(total_monthly, 2),
+                'total_yearly_estimate': round(total_yearly, 2),
+                'daily_allocation': round(total_monthly / 30.5, 2),
+                'budget_monthly_subscriptions': MONTHLY_SUBSCRIPTION_BUDGET
+            },
+            'patterns': SUBSCRIPTION_PATTERNS
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Up subscriptions: {str(e)}")
+
+@app.get("/up/spending/daily-adjusted")
+def get_daily_spending_adjusted(
+    account_id: str = Query(None, description="Filter by account ID"),
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get daily spending with subscriptions separated from discretionary spending.
+
+    Returns spending split into:
+    - discretionary: variable daily spending (food, shopping, etc.)
+    - subscriptions: fixed monthly costs spread daily
+
+    This allows the budget tracker to show variance based on discretionary spending only,
+    avoiding false "over budget" days when subscriptions hit.
+    """
+    try:
+        # Build subscription exclusion clause
+        sub_conditions = " OR ".join([f"description LIKE '%{p}%'" for p in SUBSCRIPTION_PATTERNS])
+
+        # Use SUBSTR to extract local date from ISO timestamp
+        date_expr = "SUBSTR(COALESCE(created_at, settled_at), 1, 10)"
+
+        base_conditions = [
+            "amount < 0",
+            "description NOT LIKE 'Transfer to %'",
+            "description NOT LIKE 'Transfer from %'",
+            "description NOT LIKE 'Forward to %'",
+            "description NOT LIKE 'Forward from %'",
+        ]
+        params = []
+
+        if account_id:
+            base_conditions.append("account_id = ?")
+            params.append(account_id)
+        if start_date:
+            base_conditions.append(f"{date_expr} >= ?")
+            params.append(start_date)
+        if end_date:
+            base_conditions.append(f"{date_expr} <= ?")
+            params.append(end_date)
+
+        base_where = " AND ".join(base_conditions)
+
+        # Query for discretionary spending (excluding subscriptions)
+        discretionary_query = f"""
+        SELECT
+            {date_expr} as date,
+            COUNT(*) as transaction_count,
+            ABS(SUM(amount)) as total_spending
+        FROM up_transactions
+        WHERE {base_where}
+          AND NOT ({sub_conditions})
+        GROUP BY {date_expr}
+        ORDER BY date ASC
+        """
+
+        # Query for subscription spending only
+        subscription_query = f"""
+        SELECT
+            {date_expr} as date,
+            COUNT(*) as transaction_count,
+            ABS(SUM(amount)) as total_spending
+        FROM up_transactions
+        WHERE {base_where}
+          AND ({sub_conditions})
+        GROUP BY {date_expr}
+        ORDER BY date ASC
+        """
+
+        discretionary_df = db.run_query_pandas(discretionary_query, params=params if params else None)
+        subscription_df = db.run_query_pandas(subscription_query, params=params if params else None)
+
+        # Calculate period stats for subscription allocation
+        if start_date and end_date:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            days_in_period = (end_dt - start_dt).days + 1
+        else:
+            days_in_period = 30.5  # Default month
+
+        # Calculate daily subscription allocation
+        daily_subscription_allocation = MONTHLY_SUBSCRIPTION_BUDGET / 30.5
+        period_subscription_budget = daily_subscription_allocation * days_in_period
+
+        # Get actual subscription spending in period
+        actual_subscription_total = subscription_df['total_spending'].sum() if not subscription_df.empty else 0
+
+        return {
+            "discretionary": {
+                "dates": discretionary_df['date'].tolist() if not discretionary_df.empty else [],
+                "spending": discretionary_df['total_spending'].tolist() if not discretionary_df.empty else [],
+                "transaction_counts": discretionary_df['transaction_count'].tolist() if not discretionary_df.empty else []
+            },
+            "subscriptions": {
+                "dates": subscription_df['date'].tolist() if not subscription_df.empty else [],
+                "spending": subscription_df['total_spending'].tolist() if not subscription_df.empty else [],
+                "transaction_counts": subscription_df['transaction_count'].tolist() if not subscription_df.empty else [],
+                "total": actual_subscription_total,
+                "budget": period_subscription_budget,
+                "daily_allocation": daily_subscription_allocation
+            },
+            "budget_info": {
+                "monthly_total": 5000,
+                "monthly_subscriptions": MONTHLY_SUBSCRIPTION_BUDGET,
+                "monthly_discretionary": 5000 - MONTHLY_SUBSCRIPTION_BUDGET,
+                "daily_total": round(5000 / 30.5, 2),
+                "daily_subscriptions": round(MONTHLY_SUBSCRIPTION_BUDGET / 30.5, 2),
+                "daily_discretionary": round((5000 - MONTHLY_SUBSCRIPTION_BUDGET) / 30.5, 2)
+            },
+            "subscription_patterns": SUBSCRIPTION_PATTERNS
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch adjusted daily spending: {str(e)}")
+
 @app.post("/up/sync")
 def trigger_up_sync(background_tasks: BackgroundTasks):
     """Trigger a full sync from Up Bank API."""
@@ -1401,6 +1656,62 @@ def get_up_summary():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch Up summary: {str(e)}")
+
+
+# ============================================
+# ETF Analysis Endpoints
+# ============================================
+
+@app.get("/etf/analysis")
+def get_etf_analysis():
+    """Get analysis for all configured ETFs."""
+    try:
+        results = get_all_etf_analysis()
+        return {
+            "status": "success",
+            "etfs": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch ETF analysis: {str(e)}")
+
+
+@app.get("/etf/analysis/{ticker}")
+def get_single_etf_analysis(ticker: str):
+    """Get analysis for a single ETF by ticker."""
+    try:
+        etf_config = load_etf_config()
+
+        if ticker not in etf_config:
+            raise HTTPException(status_code=404, detail=f"ETF ticker '{ticker}' not found in configuration")
+
+        result = process_ticker(ticker, etf_config[ticker])
+
+        if result is None:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch data for {ticker}")
+
+        return {
+            "status": "success",
+            "etf": result
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch ETF analysis: {str(e)}")
+
+
+@app.get("/etf/config")
+def get_etf_config():
+    """Get the list of configured ETFs."""
+    try:
+        config = load_etf_config()
+        return {
+            "status": "success",
+            "etfs": list(config.values()),
+            "count": len(config)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load ETF config: {str(e)}")
 
 
 # Run with: uvicorn main:app --reload --port 3001

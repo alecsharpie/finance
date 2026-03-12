@@ -45,7 +45,6 @@ const UpDashboard = () => {
     setSyncing(true);
     try {
       await triggerUpSync();
-      // Poll for completion
       const pollInterval = setInterval(async () => {
         const status = await fetchUpSyncStatus();
         setSyncStatus(status);
@@ -81,40 +80,50 @@ const UpDashboard = () => {
   // Not configured state
   if (health?.status === 'not_configured') {
     return (
-      <div className="up-not-configured" style={{
+      <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '60px 20px',
+        padding: '80px 20px',
         textAlign: 'center',
-        gap: '20px',
-        background: 'var(--welcoming-cream)',
-        borderRadius: '12px',
-        margin: '20px'
+        gap: '24px',
       }}>
-        <span style={{ fontSize: '64px' }}>🏦</span>
-        <h2 style={{ margin: 0, color: 'var(--primary)' }}>Connect Your Up Bank Account</h2>
-        <p style={{ color: 'var(--text-light)', maxWidth: '500px', lineHeight: '1.6' }}>
-          To see your Up Bank accounts, savings, and spending, you need to add your
-          Up Bank API token.
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '20px',
+          background: 'var(--accent-glow)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '40px',
+        }}>
+          🏦
+        </div>
+        <h2 style={{ margin: 0, color: 'var(--text)', fontSize: '1.5rem' }}>
+          Connect Your Up Bank Account
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', lineHeight: '1.6' }}>
+          To see your accounts, savings, and spending, add your Up Bank API token.
         </p>
         <div style={{
-          background: 'white',
-          borderRadius: '12px',
-          padding: '24px',
+          background: 'var(--bg-card)',
+          backdropFilter: 'var(--glass-blur)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+          padding: '28px',
           maxWidth: '500px',
           textAlign: 'left',
-          boxShadow: 'var(--card-shadow)'
         }}>
           <h4 style={{ margin: '0 0 16px 0', color: 'var(--text)' }}>Setup Steps:</h4>
-          <ol style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-light)', lineHeight: '2' }}>
+          <ol style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', lineHeight: '2.2' }}>
             <li>Open the Up app on your phone</li>
-            <li>Go to <strong>Profile → Data sharing</strong></li>
-            <li>Tap <strong>Personal Access Token</strong></li>
+            <li>Go to <strong style={{ color: 'var(--text)' }}>Profile → Data sharing</strong></li>
+            <li>Tap <strong style={{ color: 'var(--text)' }}>Personal Access Token</strong></li>
             <li>Generate a new token</li>
-            <li>Create a <code style={{ background: 'var(--welcoming-cream)', padding: '2px 6px', borderRadius: '4px' }}>.env</code> file in the finance project root</li>
-            <li>Add: <code style={{ background: 'var(--welcoming-cream)', padding: '2px 6px', borderRadius: '4px' }}>UP_BANK_TOKEN=up:yeah:your_token</code></li>
+            <li>Create a <code style={{ background: 'var(--bg-surface)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.85em' }}>.env</code> file in the project root</li>
+            <li>Add: <code style={{ background: 'var(--bg-surface)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '0.85em' }}>UP_BANK_TOKEN=up:yeah:your_token</code></li>
             <li>Restart the API server</li>
           </ol>
         </div>
@@ -129,52 +138,88 @@ const UpDashboard = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '60px 20px',
-        color: 'var(--text-light)'
+        padding: '80px 20px',
+        color: 'var(--text-secondary)',
+        gap: '12px',
       }}>
+        <span className="spin-icon" style={{ fontSize: '20px' }}>⟳</span>
         Loading Up Bank data...
       </div>
     );
   }
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'savings', label: 'Savings', icon: '🐷' },
-    { id: 'spending', label: 'Spending', icon: '💸' },
-    { id: 'budget', label: 'Budget', icon: '🎯' },
+    { id: 'overview', label: 'Overview' },
+    { id: 'savings', label: 'Savings' },
+    { id: 'spending', label: 'Spending' },
+    { id: 'budget', label: 'Budget' },
   ];
 
+  const statCards = summary ? [
+    {
+      label: 'Total Savings',
+      value: formatCurrency(summary.total_savings),
+      accent: 'var(--positive)',
+      glow: 'rgba(45, 142, 111, 0.06)',
+    },
+    {
+      label: '2Up Balance',
+      value: formatCurrency(summary.two_up_balance),
+      accent: 'var(--accent)',
+      glow: 'var(--accent-soft)',
+    },
+    {
+      label: 'This Month',
+      value: formatCurrency(summary.this_month_spending),
+      accent: '#B8860B',
+      glow: 'rgba(184, 134, 11, 0.06)',
+    },
+    {
+      label: 'Total Balance',
+      value: formatCurrency(summary.total_balance),
+      accent: '#3B7DD8',
+      glow: 'rgba(59, 125, 216, 0.06)',
+    },
+  ] : [];
+
   return (
-    <div className="up-dashboard" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-      padding: '24px',
-      background: 'var(--welcoming-cream)',
-      borderRadius: '12px'
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '16px'
+        gap: '16px',
+        paddingRight: '52px',
       }}>
         <div>
           <h2 style={{
             margin: '0 0 4px 0',
-            color: 'var(--primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
+            color: 'var(--text)',
             fontSize: '1.75rem',
-            fontWeight: '700'
+            fontWeight: '700',
+            letterSpacing: '-0.02em',
+            paddingBottom: 0,
           }}>
-            <span style={{ fontSize: '32px' }}>🏦</span>
-            Up Bank
+            <span style={{ marginRight: '10px' }}>Up Bank</span>
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: health?.status === 'ok' ? 'var(--positive)' : 'var(--negative)',
+              boxShadow: health?.status === 'ok'
+                ? '0 0 8px rgba(45, 142, 111, 0.4)'
+                : '0 0 8px rgba(196, 77, 77, 0.4)',
+              verticalAlign: 'middle',
+            }} />
           </h2>
-          <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>
+          <div style={{
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-mono)',
+          }}>
             Last synced: {formatDate(syncStatus?.last_successful_sync)}
           </div>
         </div>
@@ -186,16 +231,16 @@ const UpDashboard = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '12px 24px',
-            background: syncing ? 'var(--text-light)' : 'var(--accent)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '24px',
+            padding: '10px 20px',
+            background: syncing ? 'var(--bg-surface)' : 'transparent',
+            color: syncing ? 'var(--text-muted)' : 'var(--accent)',
+            border: `1px solid ${syncing ? 'var(--border)' : 'var(--border-accent)'}`,
+            borderRadius: '10px',
             cursor: syncing ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: '600',
-            transition: 'all 0.3s ease',
-            boxShadow: syncing ? 'none' : '0 4px 12px rgba(231, 111, 81, 0.3)',
+            fontFamily: 'var(--font-sans)',
+            transition: 'all 0.2s ease',
           }}
         >
           {syncing ? (
@@ -206,115 +251,98 @@ const UpDashboard = () => {
           ) : (
             <>
               <span>↻</span>
-              Sync Now
+              Sync
             </>
           )}
         </button>
       </div>
 
-      {/* Quick Stats */}
+      {/* Stat Cards */}
       {summary && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px'
+          gap: '16px',
         }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--welcoming-green), #7a9f85)',
-            borderRadius: '16px',
-            padding: '20px',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(148, 180, 159, 0.3)'
-          }}>
-            <div style={{ fontSize: '13px', opacity: 0.9 }}>Total Savings</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', marginTop: '4px' }}>
-              {formatCurrency(summary.total_savings)}
+          {statCards.map((card, i) => (
+            <div
+              key={card.label}
+              className={`stagger-${i + 1}`}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid var(--border)',
+                borderLeft: `3px solid ${card.accent}`,
+                transition: 'all 0.25s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = card.glow;
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--bg-card)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+              }}
+            >
+              <div style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: '600',
+                marginBottom: '8px',
+              }}>
+                {card.label}
+              </div>
+              <div style={{
+                fontSize: '26px',
+                fontWeight: '700',
+                color: 'var(--text)',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '-0.02em',
+              }}>
+                {card.value}
+              </div>
             </div>
-          </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, var(--primary), #6a5a7d)',
-            borderRadius: '16px',
-            padding: '20px',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(125, 107, 145, 0.3)'
-          }}>
-            <div style={{ fontSize: '13px', opacity: 0.9 }}>2Up Balance</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', marginTop: '4px' }}>
-              {formatCurrency(summary.two_up_balance)}
-            </div>
-          </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, var(--accent), #c75d42)',
-            borderRadius: '16px',
-            padding: '20px',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(231, 111, 81, 0.3)'
-          }}>
-            <div style={{ fontSize: '13px', opacity: 0.9 }}>This Month</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', marginTop: '4px' }}>
-              {formatCurrency(summary.this_month_spending)}
-            </div>
-          </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, var(--welcoming-blue), #7eafc7)',
-            borderRadius: '16px',
-            padding: '20px',
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(152, 193, 217, 0.3)'
-          }}>
-            <div style={{ fontSize: '13px', opacity: 0.9 }}>Total Balance</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', marginTop: '4px' }}>
-              {formatCurrency(summary.total_balance)}
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation — underline style */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        background: 'white',
-        padding: '8px',
-        borderRadius: '28px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        width: 'fit-content'
+        gap: '0',
+        borderBottom: '1px solid var(--border)',
       }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '10px 20px',
+              padding: '12px 24px',
               border: 'none',
-              borderRadius: '20px',
-              background: activeTab === tab.id ? 'var(--primary)' : 'transparent',
+              borderBottom: activeTab === tab.id
+                ? '2px solid var(--accent)'
+                : '2px solid transparent',
+              background: 'transparent',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: activeTab === tab.id ? '600' : '500',
-              color: activeTab === tab.id ? 'white' : 'var(--text-light)',
-              transition: 'all 0.3s ease',
+              color: activeTab === tab.id ? 'var(--text)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-sans)',
+              transition: 'all 0.2s ease',
+              marginBottom: '-1px',
             }}
           >
-            <span>{tab.icon}</span>
             {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '24px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
-      }}>
+      <div style={{ animation: 'fadeInUp 0.3s ease' }}>
         {activeTab === 'overview' && summary?.accounts && (
           <AccountOverview accounts={summary.accounts} onRefresh={loadData} />
         )}

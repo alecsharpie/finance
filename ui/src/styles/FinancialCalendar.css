@@ -1,16 +1,16 @@
 .financial-calendar {
   padding: 1.5rem;
-  background-color: var(--welcoming-cream);
+  background-color: var(--bg-card);
   border-radius: 12px;
-  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
-/* Add a subtle decorative element */
 .financial-calendar::before {
   content: '';
   position: absolute;
@@ -18,7 +18,7 @@
   right: -50px;
   width: 150px;
   height: 150px;
-  background: radial-gradient(circle, rgba(148, 180, 159, 0.2) 0%, rgba(148, 180, 159, 0) 70%);
+  background: radial-gradient(circle, rgba(194, 83, 58, 0.05) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 0;
 }
@@ -34,7 +34,7 @@
 
 .calendar-header h2 {
   position: relative;
-  color: var(--primary);
+  color: var(--text);
   font-size: 1.8rem;
   margin: 0;
   padding-bottom: 0.5rem;
@@ -64,41 +64,38 @@
 
 .zoom-controls button {
   padding: 0.5rem 1rem;
-  border: none;
-  background: white;
-  color: var(--text-light);
-  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
 }
 
-.zoom-controls button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+.zoom-controls button:hover:not(.active) {
+  background: var(--bg-surface);
+  color: var(--text);
 }
 
 .zoom-controls button.active {
-  background: var(--primary);
+  background: var(--accent);
   color: white;
-  box-shadow: 0 2px 8px rgba(125, 107, 145, 0.3);
+  border-color: var(--accent);
 }
 
 .date-range-controls button {
   padding: 0.5rem 1rem;
-  border: none;
-  background: white;
-  color: var(--text-light);
-  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
 }
 
 .date-range-controls button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-  color: var(--primary);
+  background: var(--bg-surface);
+  color: var(--text);
 }
 
 .calendar-grid {
@@ -111,15 +108,15 @@
 }
 
 .time-block {
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.25rem;
-  background-color: white;
+  background-color: var(--bg-card);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
 .time-block::before {
@@ -128,15 +125,15 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary), transparent);
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), transparent);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .time-block:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
 }
 
 .time-block:hover::before {
@@ -144,18 +141,18 @@
 }
 
 .time-block.selected {
-  border: none;
-  box-shadow: 0 0 0 2px var(--primary), 0 6px 16px rgba(0, 0, 0, 0.12);
-  background: rgba(242, 233, 228, 0.5);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
 }
 
 .time-block.selected::before {
   opacity: 1;
-  background: var(--primary);
+  background: var(--accent);
 }
 
 .time-block.today {
-  background-color: #f0f9ff;
+  background-color: rgba(59, 125, 216, 0.04);
 }
 
 .time-block.today::before {
@@ -163,11 +160,14 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: var(--welcoming-blue);
+  background-color: #3B7DD8;
   color: white;
   font-size: 0.7rem;
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
+  width: auto;
+  height: auto;
+  opacity: 1;
 }
 
 .time-block-header {
@@ -193,6 +193,7 @@
   color: var(--text);
   font-weight: 700;
   font-size: 1.25rem;
+  font-family: var(--font-mono);
 }
 
 .spending-bars-container {
@@ -219,36 +220,36 @@
 .bar-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-secondary);
 }
 
 .bar-amount {
   font-size: 0.75rem;
   font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 .bar-container {
   position: relative;
   height: 20px;
-  background-color: #f1f1f1;
+  background-color: var(--bg-surface);
   border-radius: 4px;
   overflow: visible;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .spending-bar {
   height: 100%;
   border-radius: 4px;
   min-width: 4px;
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .recurring-bar {
-  background-color: var(--primary);
+  background-color: var(--accent);
 }
 
 .one-time-bar {
-  background-color: var(--welcoming-green);
+  background-color: var(--positive);
 }
 
 .avg-indicator {
@@ -258,18 +259,16 @@
   width: 2px;
   transform: translateX(-1px);
   z-index: 2;
-  box-shadow: 0 0 0 1px white;
+  box-shadow: 0 0 0 1px var(--bg-card);
   min-height: 20px;
 }
 
 .recurring-avg {
-  background-color: #5d4d6d;
-  box-shadow: 0 0 0 1px white;
+  background-color: var(--accent);
 }
 
 .one-time-avg {
-  background-color: #5a8f67;
-  box-shadow: 0 0 0 1px white;
+  background-color: var(--positive);
 }
 
 .avg-indicator::after {
@@ -283,27 +282,18 @@
   background-color: inherit;
 }
 
-/* Remove the amount-breakdown section since we've integrated it */
-.amount-breakdown {
-  display: none;
-}
-
-/* Remove the merchant tags and spending legend sections that are no longer needed */
-.merchant-tags {
-  display: none;
-}
-
-.spending-legend {
-  display: none;
-}
+.amount-breakdown { display: none; }
+.merchant-tags { display: none; }
+.spending-legend { display: none; }
 
 /* Detail Panel */
 .detail-panel {
   margin-top: 1.5rem;
-  background-color: white;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
 }
 
 .detail-header {
@@ -326,21 +316,21 @@
 
 .drill-down-button {
   padding: 0.5rem 1rem;
-  background-color: var(--primary);
+  background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .drill-down-button:hover:not(:disabled) {
-  background-color: #6a5b7c;
-  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .drill-down-button:disabled {
-  background-color: #d1d5db;
+  background-color: var(--bg-surface);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -350,18 +340,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 50%;
   cursor: pointer;
   font-size: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-secondary);
   transition: all 0.2s ease;
 }
 
 .close-button:hover {
-  background-color: #f3f4f6;
-  transform: translateY(-2px);
+  background-color: var(--bg-card-hover);
+  color: var(--text);
 }
 
 .detail-summary {
@@ -369,7 +359,7 @@
   justify-content: space-between;
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(125, 107, 145, 0.2);
+  border-bottom: 1px solid var(--border);
 }
 
 .total-spending {
@@ -379,13 +369,14 @@
 
 .total-spending .label {
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .total-spending .value {
   font-size: 1.75rem;
   font-weight: 600;
   color: var(--text);
+  font-family: var(--font-mono);
 }
 
 .spending-breakdown {
@@ -400,22 +391,24 @@
 
 .recurring-spending .label, .onetime-spending .label {
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .recurring-spending .value {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent);
+  font-family: var(--font-mono);
 }
 
 .onetime-spending .value {
   font-weight: 600;
-  color: var(--welcoming-green);
+  color: var(--positive);
+  font-family: var(--font-mono);
 }
 
 .percentage {
   font-size: 0.875rem;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .transactions-container {
@@ -430,7 +423,7 @@
   color: var(--text);
   font-weight: 500;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid rgba(125, 107, 145, 0.2);
+  border-bottom: 1px solid var(--border);
 }
 
 .transaction-list {
@@ -441,9 +434,17 @@
 .transaction-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(125, 107, 145, 0.1);
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
 }
+
+.transaction-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.transaction-item:last-child { margin-bottom: 0; }
 
 .transaction-item .merchant {
   flex-grow: 1;
@@ -453,11 +454,12 @@
 .transaction-item .amount {
   font-weight: 600;
   margin-right: 0.75rem;
-  color: var(--primary);
+  color: var(--accent);
+  font-family: var(--font-mono);
 }
 
 .transaction-item .frequency {
-  color: var(--text-light);
+  color: var(--text-muted);
   font-size: 0.875rem;
 }
 
@@ -465,15 +467,16 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 3rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   font-style: italic;
-  background-color: rgba(125, 107, 145, 0.05);
+  background-color: var(--bg-surface);
   border-radius: 8px;
 }
 
 .error-message {
-  background-color: #fee2e2;
-  color: #ef4444;
+  background-color: rgba(196, 77, 77, 0.06);
+  color: var(--negative);
+  border: 1px solid rgba(196, 77, 77, 0.15);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
@@ -482,53 +485,51 @@
 .loading {
   text-align: center;
   padding: 3rem;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .no-data {
-  color: var(--text-light);
+  color: var(--text-muted);
   font-style: italic;
   padding: 1rem 0;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .calendar-toolbar {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .toolbar-right {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .view-selector {
     width: 100%;
   }
-  
+
   .view-selector button {
     flex: 1;
     text-align: center;
     padding: 0.5rem 0;
   }
-  
+
   .transactions-container {
     grid-template-columns: 1fr;
   }
-  
+
   .detail-summary {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .spending-breakdown {
     justify-content: space-between;
   }
 }
 
-/* Animation for transitions */
 .calendar-grid {
   transition: all 0.3s ease;
 }
@@ -538,20 +539,13 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Special styling for empty days */
 .time-block:empty {
   background-color: transparent;
-  border: 1px dashed rgba(125, 107, 145, 0.3);
+  border: 1px dashed var(--border);
   box-shadow: none;
   cursor: default;
 }
@@ -561,39 +555,25 @@
   box-shadow: none;
 }
 
-/* Fix the color matching - each amount should match its corresponding label */
-.bar-header:has(.bar-label.recurring) .bar-amount {
-  color: var(--primary);
-}
-
-.bar-header:has(.bar-label.one-time) .bar-amount {
-  color: var(--welcoming-green);
-}
-
-/* Add specific classes for each amount type */
 .bar-container-with-label:first-child .bar-amount {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .bar-container-with-label:last-child .bar-amount {
-  color: var(--welcoming-green);
+  color: var(--positive);
 }
 
-/* Add these styles to the existing FinancialCalendar.css */
+/* Category bars */
+.category-bars { margin: 1rem 0; }
 
-.category-bars {
-  margin: 1rem 0;
-}
-
-.category-bar-container {
-  margin-bottom: 0.75rem;
-}
+.category-bar-container { margin-bottom: 0.75rem; }
 
 .category-bar-label {
   display: flex;
   align-items: center;
   margin-bottom: 0.25rem;
   font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .category-icon {
@@ -611,13 +591,14 @@
 .category-amount {
   margin-left: auto;
   font-weight: 500;
-  font-family: 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
+  color: var(--text);
 }
 
 .category-bar-wrapper {
   position: relative;
   height: 8px;
-  background-color: #f1f1f1;
+  background-color: var(--bg-surface);
   border-radius: 4px;
   overflow: visible;
   margin-bottom: 12px;
@@ -637,19 +618,9 @@
   font-size: 0.85rem;
 }
 
-.spending-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.spending-label {
-  color: var(--text-light);
-  font-size: 0.75rem;
-}
-
-.spending-value {
-  font-weight: 500;
-}
+.spending-item { display: flex; flex-direction: column; }
+.spending-label { color: var(--text-muted); font-size: 0.75rem; }
+.spending-value { font-weight: 500; color: var(--text); }
 
 .date-range-controls {
   display: flex;
@@ -659,28 +630,29 @@
 
 .date-range-controls button {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--primary);
-  background: white;
-  color: var(--primary);
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .date-range-controls button:hover {
-  background: rgba(125, 107, 145, 0.1);
+  background: var(--bg-surface);
 }
 
-/* Add these welcoming-inspired styles */
+/* Period detail */
 .period-detail {
-  background-color: white;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
   margin-top: 2rem;
   border-top: none;
+  box-shadow: var(--card-shadow);
 }
 
 .period-detail::before {
@@ -689,12 +661,12 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--welcoming-green), var(--primary));
+  height: 3px;
+  background: linear-gradient(90deg, var(--positive), var(--accent));
 }
 
 .period-detail h3 {
-  color: var(--primary);
+  color: var(--text);
   font-size: 1.5rem;
   margin-top: 0;
   position: relative;
@@ -716,14 +688,15 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-  background-color: var(--welcoming-cream);
+  background-color: var(--bg-surface);
   border-radius: 12px;
   padding: 1.5rem;
   margin-top: 1.5rem;
+  border: 1px solid var(--border);
 }
 
 .summary-section h4 {
-  color: var(--primary);
+  color: var(--text-secondary);
   margin-top: 0;
   font-size: 1.2rem;
 }
@@ -731,12 +704,13 @@
 .summary-section .amount {
   font-size: 1.8rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent);
+  font-family: var(--font-mono);
   margin-bottom: 1.5rem;
 }
 
 .summary-section h5 {
-  color: var(--text-light);
+  color: var(--text-muted);
   font-size: 1rem;
   margin-bottom: 0.75rem;
   position: relative;
@@ -756,10 +730,10 @@
 }
 
 .transaction-list {
-  background-color: white;
+  background-color: var(--bg-card);
   border-radius: 8px;
   padding: 0.75rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border);
 }
 
 .transaction-item {
@@ -767,16 +741,14 @@
   border-radius: 8px;
   margin-bottom: 0.5rem;
   transition: all 0.2s ease;
-  background-color: rgba(242, 233, 228, 0.3);
+  background-color: var(--bg-surface);
 }
 
 .transaction-item:hover {
-  background-color: rgba(242, 233, 228, 0.6);
+  background-color: var(--bg-card-hover);
 }
 
-.transaction-item:last-child {
-  margin-bottom: 0;
-}
+.transaction-item:last-child { margin-bottom: 0; }
 
 .category-tag {
   padding: 0.25rem 0.5rem;
@@ -788,24 +760,18 @@
 .no-data {
   text-align: center;
   padding: 2rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   font-style: italic;
-  background-color: rgba(242, 233, 228, 0.5);
+  background-color: var(--bg-surface);
   border-radius: 8px;
   position: relative;
 }
 
 .no-data::before {
-  content: '🍃';
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 1.2rem;
-  opacity: 0.5;
+  content: '';
 }
 
-/* Add these styles to your existing FinancialCalendar.css */
-
+/* Drill-down hint */
 .drill-down-hint {
   position: absolute;
   bottom: 10px;
@@ -813,7 +779,7 @@
   right: 0;
   text-align: center;
   font-size: 0.75rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -827,51 +793,30 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background-color: white;
-  border: none;
-  border-radius: 20px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  color: var(--primary);
+  transition: all 0.2s ease;
+  color: var(--accent);
   font-weight: 500;
 }
 
 .back-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-  background-color: rgba(125, 107, 145, 0.1);
+  background-color: var(--bg-surface);
 }
 
-.back-icon {
-  font-size: 1.1rem;
-}
-
-/* Animation for drill-down transition */
-.calendar-grid {
-  animation: fadeIn 0.4s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+.back-icon { font-size: 1.1rem; }
 
 .date-range-info {
   margin-bottom: 1rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   font-size: 0.9rem;
   text-align: center;
 }
 
 .no-data-message {
-  background-color: #f8f9fa;
+  background-color: var(--bg-surface);
   border-radius: 8px;
   padding: 2rem;
   text-align: center;
@@ -886,7 +831,7 @@
 }
 
 .no-data-message p:last-child {
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .period-navigation {
@@ -895,9 +840,9 @@
   align-items: center;
   margin-bottom: 1.5rem;
   padding: 0.5rem 1rem;
-  background-color: white;
+  background-color: var(--bg-card);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
 }
 
 .nav-button {
@@ -905,46 +850,43 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background-color: var(--welcoming-cream);
-  border: none;
-  border-radius: 20px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  color: var(--primary);
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .nav-button:hover {
-  background-color: rgba(125, 107, 145, 0.1);
-  transform: translateY(-2px);
+  background-color: var(--bg-surface);
+  color: var(--accent);
 }
 
-.nav-icon {
-  font-size: 1.1rem;
-}
+.nav-icon { font-size: 1.1rem; }
 
-.current-period {
-  text-align: center;
-}
+.current-period { text-align: center; }
 
 .current-period h3 {
   margin: 0;
-  color: var(--primary);
+  color: var(--text);
   font-size: 1.4rem;
   font-weight: 600;
 }
 
-/* Hourly view styles */
+/* Hourly view */
 .hourly-view {
-  background-color: white;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   margin-top: 1rem;
+  box-shadow: var(--card-shadow);
 }
 
 .hourly-view h3 {
-  color: var(--primary);
+  color: var(--text);
   margin-top: 0;
   margin-bottom: 1.5rem;
   font-size: 1.4rem;
@@ -963,12 +905,10 @@
   background: var(--accent);
 }
 
-.hour-group {
-  margin-bottom: 1.5rem;
-}
+.hour-group { margin-bottom: 1.5rem; }
 
 .hour-header {
-  background-color: var(--welcoming-cream);
+  background-color: var(--bg-surface);
   padding: 0.5rem 1rem;
   border-radius: 8px 8px 0 0;
   margin-bottom: 0.5rem;
@@ -976,32 +916,34 @@
 
 .hour-label {
   font-weight: 500;
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .transactions-list {
-  background-color: #f8f9fa;
+  background-color: var(--bg-card);
   border-radius: 0 0 8px 8px;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-top: none;
 }
 
 .transaction-row {
   display: grid;
   grid-template-columns: 80px 1fr 1.5fr 200px 120px;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--border);
   align-items: center;
   transition: background-color 0.2s;
 }
 
 .transaction-row:hover {
-  background-color: rgba(242, 233, 228, 0.3);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .transaction-time {
-  font-family: 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: var(--text-light);
+  color: var(--text-muted);
 }
 
 .transaction-merchant {
@@ -1012,24 +954,23 @@
   gap: 0.5rem;
 }
 
-.transaction-category {
-  text-align: right;
-}
+.transaction-category { text-align: right; }
 
 .transaction-amount {
-  font-family: 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   text-align: right;
+  color: var(--text);
 }
 
 .uncategorized {
   font-size: 0.8rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   font-style: italic;
 }
 
 .transaction-description {
-  color: var(--text-light);
+  color: var(--text-muted);
   font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1038,7 +979,6 @@
   padding-right: 1rem;
 }
 
-/* Update responsive styles */
 @media (max-width: 768px) {
   .transaction-row {
     grid-template-columns: 1fr 1fr;
@@ -1046,35 +986,13 @@
     gap: 0.5rem;
     padding: 1rem;
   }
-  
-  .transaction-time {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  
-  .transaction-merchant {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  
-  .transaction-description {
-    grid-column: 1 / span 2;
-    grid-row: 2;
-  }
-  
-  .transaction-category {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  
-  .transaction-amount {
-    grid-column: 2;
-    grid-row: 3;
-    text-align: right;
-  }
+  .transaction-time { grid-column: 1; grid-row: 1; }
+  .transaction-merchant { grid-column: 2; grid-row: 1; }
+  .transaction-description { grid-column: 1 / span 2; grid-row: 2; }
+  .transaction-category { grid-column: 1; grid-row: 3; }
+  .transaction-amount { grid-column: 2; grid-row: 3; text-align: right; }
 }
 
-/* Fix time display in hourly view */
 .hourly-view-container .event-time {
   font-weight: bold;
   margin-bottom: 4px;
@@ -1083,10 +1001,7 @@
   text-overflow: ellipsis;
 }
 
-/* Add new category breakdown styles */
-.category-breakdown {
-  margin-top: 1rem;
-}
+.category-breakdown { margin-top: 1rem; }
 
 .category-item {
   display: flex;
@@ -1097,12 +1012,13 @@
 .category-name {
   width: 30%;
   font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .category-bar-container {
   flex-grow: 1;
   height: 8px;
-  background-color: #f1f1f1;
+  background-color: var(--bg-surface);
   border-radius: 4px;
   margin: 0 0.5rem;
 }
@@ -1117,9 +1033,9 @@
   text-align: right;
   font-size: 0.8rem;
   font-weight: 500;
+  font-family: var(--font-mono);
 }
 
-/* Add these styles for the average indicators */
 .avg-indicator {
   position: absolute;
   top: -5px;
@@ -1127,7 +1043,7 @@
   width: 2px;
   transform: translateX(-1px);
   z-index: 2;
-  box-shadow: 0 0 0 1px white;
+  box-shadow: 0 0 0 1px var(--bg-card);
   min-height: 20px;
 }
 
@@ -1147,7 +1063,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.15);
   z-index: 2;
 }
 
@@ -1162,22 +1078,19 @@
   background-color: inherit;
 }
 
-/* Add a tooltip style for hover information */
 .bar-container {
   position: relative;
   height: 20px;
-  background-color: #f1f1f1;
+  background-color: var(--bg-surface);
   border-radius: 4px;
   overflow: visible;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Make sure the bar container has proper positioning for absolute elements */
 .category-bar-wrapper {
   position: relative;
   height: 8px;
-  background-color: #f1f1f1;
+  background-color: var(--bg-surface);
   border-radius: 4px;
   overflow: visible;
   margin-bottom: 12px;
-} 
+}

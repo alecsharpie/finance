@@ -1,0 +1,46 @@
+{
+    "etfs": [
+        {
+            "ticker": "VAS",
+            "title": "Australian Top 300 ETF",
+            "name": "Vanguard Australian Shares Index ETF",
+            "description": "Tracks S&P/ASX 300 index, covering Australia's 300 largest companies",
+            "etfType": "Australian Equity Index"
+        },
+        {
+            "ticker": "VGS",
+            "title": "Global Ex-Australia ETF",
+            "name": "Vanguard MSCI Index International Shares ETF",
+            "description": "Tracks MSCI World ex-Australia Index, covering global developed markets",
+            "etfType": "Global Equity Index"
+        },
+        {
+            "ticker": "VTS",
+            "title": "US Total Market ETF",
+            "name": "Vanguard US Total Market Shares Index",
+            "description": "Tracks CRSP US Total Market Index, covering 99.5% of the US stock market",
+            "etfType": "US Equity Index"
+        },
+        {
+            "ticker": "NDQ",
+            "title": "NASDAQ 100 ETF",
+            "name": "BetaShares NASDAQ 100 ETF",
+            "description": "Tracks NASDAQ-100 Index, covering 100 largest non-financial securities on NASDAQ",
+            "etfType": "US Equity Index"
+        },
+        {
+            "ticker": "VGE",
+            "title": "Emerging Markets ETF",
+            "name": "Vanguard FTSE Emerging Markets Shares ETF",
+            "description": "Tracks FTSE Emerging Markets All Cap China A Inclusion Index, covering emerging markets companies",
+            "etfType": "Emerging Markets"
+        },
+        {
+            "ticker": "VHY",
+            "title": "Australian High Yield ETF",
+            "name": "Vanguard Australian Shares High Yield ETF",
+            "description": "Tracks FTSE ASFA Australia High Dividend Yield Index, focusing on high forecast dividends",
+            "etfType": "Australian Equity Strategy"
+        }
+    ]
+}
